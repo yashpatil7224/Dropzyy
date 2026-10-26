@@ -50,6 +50,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        
+        # Zero-cache headers for all dynamic API routes & core SPA assets across all mobile & desktop browsers
+        path = request.url.path.lower()
+        if (
+            path.startswith("/api/")
+            or path in ["/", "/app.js", "/style.css", "/menu_card_data.js", "/index.html"]
+            or path.endswith(".js")
+            or path.endswith(".css")
+            or path.endswith(".html")
+        ):
+            if not path.startswith("/api/images/"):
+                response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
         return response
 
 # ==============================================================================
@@ -229,41 +243,46 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
     allow_headers=["*"],
 )
 
 # ==============================================================================
-# KEEP-ALIVE PING ENDPOINTS (PREVENT RENDER SLEEP / COLD STARTS)
+# 💓 ULTRA-FAST KEEP-ALIVE ENDPOINTS (Zero DB/middleware overhead, prevents cold starts)
+# Supports GET, HEAD (UptimeRobot default), POST, and OPTIONS
 # ==============================================================================
 @app.api_route("/ping", methods=["GET", "HEAD", "POST", "OPTIONS"])
 @app.api_route("/health", methods=["GET", "HEAD", "POST", "OPTIONS"])
 @app.api_route("/api/ping", methods=["GET", "HEAD", "POST", "OPTIONS"])
 def ping_keep_alive():
-    """
-    Ultra-lightweight keep-alive route.
-    Accepts GET, HEAD, POST, and OPTIONS requests from all uptime monitors
-    (e.g. UptimeRobot, Pingdom, Render, cron jobs) and returns HTTP 200 instantly (< 1ms).
-    """
-    return Response(content="OK", media_type="text/plain")
+    return Response(content="OK", media_type="text/plain", status_code=200)
 
 # ROOT & STATIC FILE SERVING FOR DEPLOYMENT (e.g. Render)
 @app.get("/")
-def read_index():
+def read_index(response: Response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     if os.path.exists("index.html"):
-        return FileResponse("index.html")
+        return FileResponse("index.html", headers=response.headers)
     return {"message": "Dropzyy Instant Delivery API Server Running"}
 
 @app.get("/style.css")
-def get_css():
+def get_css(response: Response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     if os.path.exists("style.css"):
-        return FileResponse("style.css")
+        return FileResponse("style.css", media_type="text/css", headers=response.headers)
     raise HTTPException(status_code=404, detail="style.css not found")
 
 @app.get("/app.js")
-def get_js():
+def get_js(response: Response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     if os.path.exists("app.js"):
-        return FileResponse("app.js")
+        return FileResponse("app.js", media_type="application/javascript", headers=response.headers)
     raise HTTPException(status_code=404, detail="app.js not found")
 
 @app.get("/menu_card_data.js")
@@ -1645,44 +1664,57 @@ def login_user(credentials: schemas.UserLogin, request: Request, db: Session = D
     raise HTTPException(status_code=401, detail="Invalid email/username or password!")
 
 @app.get("/api/auth/me", response_model=schemas.UserResponse)
-def get_current_logged_in_user(token_user: dict = Depends(require_authenticated_user), db: Session = Depends(get_db)):
-    """Return verified user profile for currently authenticated bearer token (Amazon/Flipkart standard)."""
-    user_id = token_user.get("user_id") or token_user.get("sub_id")
-    user_name = token_user.get("sub") or token_user.get("username")
-    
-    user = None
-    if user_id:
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user and user_name:
-        user = db.query(models.User).filter(models.User.username == user_name).first()
-        
-    if user:
-        return user
-        
-    if mongo_db.is_mongo_active() and user_name:
-        m_user = mongo_db.mongo_find_user(user_name)
-        if m_user:
-            return models.User(
-                id=m_user.get("id") or 999,
-                username=m_user.get("username"),
-                email=m_user.get("email"),
-                full_name=m_user.get("full_name") or user_name,
-                phone=m_user.get("phone"),
-                role=m_user.get("role") or token_user.get("role", "customer"),
-                supplier_company_name=m_user.get("supplier_company_name"),
-                city=m_user.get("city") or "",
-                store_open=m_user.get("store_open") if m_user.get("store_open") is not None else True
-            )
-            
-    return models.User(
-        id=user_id or 1,
-        username=user_name or "user",
-        email=f"{user_name}@dropzyy.com",
-        full_name=user_name,
-        role=token_user.get("role", "customer"),
-        store_open=True
-    )
+def get_current_user_profile(
+    response: Response,
+    db: Session = Depends(get_db),
+    caller: dict = Depends(require_authenticated_user)
+):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
 
+    sub_id = caller.get("sub")
+    uname = (caller.get("username") or "").strip()
+
+    # 1. MongoDB Atlas
+    if mongo_db.is_mongo_active():
+        try:
+            m_user = mongo_db.mongo_find_user(uname)
+            if m_user:
+                u_id = m_user.get("id")
+                int_id = int(u_id) if (u_id and str(u_id).isdigit()) else (int(sub_id) if sub_id and str(sub_id).isdigit() else 1)
+                return schemas.UserResponse(
+                    id=int_id,
+                    username=m_user.get("username"),
+                    email=m_user.get("email"),
+                    full_name=m_user.get("full_name") or uname,
+                    role=m_user.get("role", "customer"),
+                    supplier_company_name=m_user.get("supplier_company_name"),
+                    phone=m_user.get("phone"),
+                    street_address=m_user.get("street_address") or (m_user.get("address") or {}).get("streetAddress"),
+                    city=m_user.get("city") or (m_user.get("address") or {}).get("city") or "Savda",
+                    pincode=m_user.get("pincode") or (m_user.get("address") or {}).get("pincode"),
+                    is_verified=m_user.get("is_verified", True),
+                    store_open=m_user.get("store_open", True),
+                    open_time=m_user.get("open_time", "08:00 AM"),
+                    close_time=m_user.get("close_time", "10:00 PM"),
+                    banner_image=m_user.get("banner_image") or m_user.get("cover_image"),
+                    menu_card_image=m_user.get("menu_card_image")
+                )
+        except Exception as e:
+            print(f"[AUTH ME MONGO ERR]: {e}")
+
+    # 2. SQLite
+    user = None
+    if sub_id and str(sub_id).isdigit():
+        user = db.query(models.User).filter(models.User.id == int(sub_id)).first()
+    if not user and uname:
+        user = db.query(models.User).filter(models.User.username.ilike(uname)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    return user
 
 @app.put("/api/auth/profile/address", response_model=schemas.UserResponse)
 def update_user_address(data: schemas.UserUpdateAddress, db: Session = Depends(get_db)):
@@ -2027,6 +2059,11 @@ def get_all_users(db: Session = Depends(get_db), _admin: dict = Depends(require_
                     phone=mu.get("phone"),
                     role=mu.get("role") or "customer",
                     supplier_company_name=mu.get("supplier_company_name"),
+                    city=mu.get("city") or (mu.get("address") or {}).get("city") or "Savda",
+                    street_address=mu.get("street_address") or (mu.get("address") or {}).get("streetAddress"),
+                    pincode=mu.get("pincode") or (mu.get("address") or {}).get("pincode"),
+                    banner_image=mu.get("banner_image") or mu.get("cover_image"),
+                    menu_card_image=mu.get("menu_card_image"),
                     is_verified=mu.get("is_verified", True),
                     open_time=mu.get("open_time") or "08:00 AM",
                     close_time=mu.get("close_time") or "10:00 PM",
@@ -2057,13 +2094,101 @@ def delete_user(user_id: int, db: Session = Depends(get_db), _admin: dict = Depe
         db.commit()
     return {"message": f"User {user_id} deleted successfully"}
 
+@app.put("/api/admin/users/{user_id_or_username}")
+def update_user_by_admin(
+    user_id_or_username: str,
+    update_data: schemas.AdminUserUpdate,
+    response: Response,
+    db: Session = Depends(get_db),
+    _admin: dict = Depends(require_admin)
+):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    clean_target = user_id_or_username.strip()
+    clean_lower = clean_target.lower()
+
+    # 1. Update in SQLite
+    user = None
+    if clean_target.isdigit():
+        user = db.query(models.User).filter(models.User.id == int(clean_target)).first()
+    if not user:
+        user = db.query(models.User).filter(models.User.username.ilike(clean_lower)).first()
+
+    if user:
+        if update_data.full_name is not None: user.full_name = update_data.full_name
+        if update_data.role is not None: user.role = update_data.role.lower()
+        if update_data.phone is not None: user.phone = update_data.phone
+        if update_data.supplier_company_name is not None: user.supplier_company_name = update_data.supplier_company_name
+        if update_data.street_address is not None: user.street_address = update_data.street_address
+        if update_data.city is not None: user.city = update_data.city
+        if update_data.pincode is not None: user.pincode = update_data.pincode
+        if update_data.banner_image is not None: user.banner_image = update_data.banner_image
+        if update_data.menu_card_image is not None: user.menu_card_image = update_data.menu_card_image
+        if update_data.store_open is not None: user.store_open = update_data.store_open
+        if update_data.open_time is not None: user.open_time = update_data.open_time
+        if update_data.close_time is not None: user.close_time = update_data.close_time
+        db.commit()
+        db.refresh(user)
+
+    # 2. Update in MongoDB Atlas
+    if mongo_db.is_mongo_active():
+        try:
+            m_db = mongo_db.get_mongo_db()
+            mongo_update = {}
+            if update_data.full_name is not None: mongo_update["full_name"] = update_data.full_name
+            if update_data.role is not None: mongo_update["role"] = update_data.role.lower()
+            if update_data.phone is not None: mongo_update["phone"] = update_data.phone
+            if update_data.supplier_company_name is not None: mongo_update["supplier_company_name"] = update_data.supplier_company_name
+            if update_data.street_address is not None: mongo_update["street_address"] = update_data.street_address
+            if update_data.city is not None: mongo_update["city"] = update_data.city
+            if update_data.pincode is not None: mongo_update["pincode"] = update_data.pincode
+            if update_data.banner_image is not None: mongo_update["banner_image"] = update_data.banner_image
+            if update_data.menu_card_image is not None: mongo_update["menu_card_image"] = update_data.menu_card_image
+            if update_data.store_open is not None: mongo_update["store_open"] = update_data.store_open
+            if update_data.open_time is not None: mongo_update["open_time"] = update_data.open_time
+            if update_data.close_time is not None: mongo_update["close_time"] = update_data.close_time
+
+            clauses = [{"username": clean_lower}, {"email": clean_lower}]
+            if clean_target.isdigit():
+                clauses.extend([{"id": int(clean_target)}, {"id": clean_target}])
+
+            m_db.users.update_many({"$or": clauses}, {"$set": mongo_update})
+
+            # If supplier company name was updated, sync related products
+            if update_data.supplier_company_name:
+                m_db.products.update_many(
+                    {"$or": [
+                        {"supplier_user_id": clean_target},
+                        {"supplier_user_id": str(user.id if user else clean_target)},
+                        {"supplier_name": user.supplier_company_name if (user and user.supplier_company_name) else clean_target}
+                    ]},
+                    {"$set": {
+                        "supplier_company_name": update_data.supplier_company_name,
+                        "supplier_name": update_data.supplier_company_name
+                    }}
+                )
+        except Exception as m_err:
+            print(f"[MONGODB USER UPDATE ERROR]: {m_err}")
+
+    return {
+        "message": f"User '{user_id_or_username}' updated successfully",
+        "username": clean_lower,
+        "role": update_data.role or (user.role if user else "customer")
+    }
+
 # PRODUCT API ENDPOINTS
 @app.get("/api/products", response_model=List[schemas.ProductResponse])
 def get_products(
+    response: Response,
     category: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0" 
     cat_str = category if (isinstance(category, str) and category != "all") else None
     srch_str = search.strip().lower() if (isinstance(search, str) and search.strip()) else None
 
@@ -3291,7 +3416,10 @@ def unblock_contact_post(payload: dict = Body(...), db: Session = Depends(get_db
 # Category Management Endpoints (MongoDB Atlas & SQLite Sync)
 # ==========================================
 @app.get("/api/categories", response_model=List[schemas.CategoryResponse])
-def get_categories(db: Session = Depends(get_db)):
+def get_categories(response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0" 
     if mongo_db.is_mongo_active():
         try:
             m_cats = mongo_db.mongo_get_all_categories()
@@ -3888,65 +4016,6 @@ def update_delivery_settings(
         description=setting.description,
         updated_at=setting.updated_at.isoformat() if setting.updated_at else None
     )
-
-# ==============================================================================
-# PROMOTIONAL BANNER POSTERS (MONGODB ATLAS SEPARATE SECTION)
-# ==============================================================================
-
-@app.get("/api/banners")
-def get_banner_posters():
-    """Retrieve all active promotional banner poster slides from MongoDB Atlas."""
-    if mongo_db.is_mongo_active():
-        posters = mongo_db.mongo_get_banner_posters()
-        if posters:
-            return {"status": "success", "source": "mongodb", "count": len(posters), "data": posters}
-    return {
-        "status": "success",
-        "source": "fallback",
-        "count": 0,
-        "data": []
-    }
-
-@app.post("/api/admin/banners")
-@app.post("/api/banners")
-def save_banner_posters(
-    payload: Any = Body(...)
-):
-    """Save or update promotional banner poster slides directly in MongoDB Atlas."""
-    posters = []
-    if isinstance(payload, list):
-        posters = payload
-    elif isinstance(payload, dict) and "banners" in payload:
-        posters = payload["banners"]
-    elif isinstance(payload, dict) and "data" in payload:
-        posters = payload["data"]
-    elif isinstance(payload, dict):
-        posters = [payload]
-
-    if mongo_db.is_mongo_active():
-        success = mongo_db.mongo_save_all_banner_posters(posters)
-        return {
-            "status": "success" if success else "error",
-            "message": "Banner posters saved to MongoDB Atlas dedicated collection 'banner_posters'" if success else "Failed to save to MongoDB",
-            "count": len(posters)
-        }
-    return {
-        "status": "warning",
-        "message": "MongoDB is currently offline, client storage fallback applied",
-        "count": len(posters)
-    }
-
-@app.delete("/api/admin/banners/{poster_id}")
-def delete_banner_poster(poster_id: str):
-    """Delete a promotional banner poster slide from MongoDB Atlas."""
-    if mongo_db.is_mongo_active():
-        deleted = mongo_db.mongo_delete_banner_poster(poster_id)
-        return {
-            "status": "success" if deleted else "not_found",
-            "message": f"Poster '{poster_id}' deleted from MongoDB Atlas" if deleted else "Poster not found"
-        }
-    return {"status": "error", "message": "MongoDB offline"}
-
 
 if __name__ == "__main__":
     import uvicorn

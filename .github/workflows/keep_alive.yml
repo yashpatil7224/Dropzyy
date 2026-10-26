@@ -1,19 +1,27 @@
-name: Keep Dropzyy Alive
+name: Keep-Alive Pinger
 
 on:
   schedule:
-    # Runs every 10 minutes 24/7 to prevent Render free-tier inactivity sleep
+    # Runs every 10 minutes 24/7 to prevent free cloud hosts (Render/Koyeb/Glitch) from sleeping
     - cron: '*/10 * * * *'
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
-  ping-service:
+  keep-alive:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Ping Dropzyy Production
+      - name: Ping Keep-Alive Endpoint
+        env:
+          TARGET_URL: ${{ secrets.PRODUCTION_URL || 'https://www.dropzyy.in' }}
         run: |
-          echo "Pinging Dropzyy Production Services..."
-          curl -s -o /dev/null -w "dropzyy.in: %{http_code}\n" https://www.dropzyy.in/ || true
-          curl -s -o /dev/null -w "dropzyy.in/ping: %{http_code}\n" https://www.dropzyy.in/ping || true
-          curl -s -o /dev/null -w "freshkart-9j9b/ping: %{http_code}\n" https://freshkart-9j9b.onrender.com/ping || true
-          echo "Keep-alive ping completed successfully!"
+          echo "Sending keep-alive ping to ${TARGET_URL}/ping..."
+          RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 30 -X GET "${TARGET_URL}/ping")
+          echo "HTTP Response Status: ${RESPONSE_CODE}"
+          if [ "$RESPONSE_CODE" -ge 200 ] && [ "$RESPONSE_CODE" -lt 400 ]; then
+            echo "Keep-alive ping succeeded! Host is active."
+          else
+            echo "Primary URL ping returned ${RESPONSE_CODE}. Trying fallback URL..."
+            FALLBACK_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 30 -X GET "https://dropzyy.onrender.com/ping")
+            echo "Fallback HTTP Response Status: ${FALLBACK_CODE}"
+          fi

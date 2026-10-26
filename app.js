@@ -400,21 +400,16 @@ const DEFAULT_PRODUCTS = [
 
 const DEFAULT_CATEGORIES = [
     { id: 'all', name: 'All Categories', icon: 'fa-solid fa-border-all', count: 16 },
-    { id: 'food', name: 'Hotels & Dishes', icon: 'fa-solid fa-utensils', count: 12 },
-    { id: 'pizza', name: 'Pizza & Fast Food', icon: 'fa-solid fa-pizza-slice', count: 8 },
-    { id: 'biryani', name: 'Biryani & Rice', icon: 'fa-solid fa-bowl-rice', count: 6 },
     { id: 'staples', name: 'Atta, Rice & Dal', icon: 'fa-solid fa-wheat-awn', count: 6 },
-    { id: 'oil', name: 'Oil & Ghee', icon: 'fa-solid fa-bottle-droplet', count: 2 },
-    { id: 'dairy', name: 'Dairy & Butter', icon: 'fa-solid fa-cow', count: 4 },
-    { id: 'vegetables', name: 'Sabzi & Fruits', icon: 'fa-solid fa-carrot', count: 5 },
-    { id: 'tea', name: 'Tea & Drinks', icon: 'fa-solid fa-mug-hot', count: 3 },
-    { id: 'snacks', name: 'Snacks & Munchies', icon: 'fa-solid fa-cookie-bite', count: 5 },
-    { id: 'sweets', name: 'Sweets & Desserts', icon: 'fa-solid fa-cake-candles', count: 4 }
+    { id: 'oil', name: 'Oil & Ghee', icon: 'fa-solid fa-bottle-droplet', count: 1 },
+    { id: 'dairy', name: 'Dairy & Butter', icon: 'fa-solid fa-cow', count: 2 },
+    { id: 'vegetables', name: 'Sabzi & Fruits', icon: 'fa-solid fa-carrot', count: 3 },
+    { id: 'tea', name: 'Tea & Drinks', icon: 'fa-solid fa-mug-hot', count: 1 },
+    { id: 'snacks', name: 'Snacks & Noodles', icon: 'fa-solid fa-cookie-bite', count: 3 }
 ];
 
 const PURGED_UNUSED_CATS = new Set(['hotel_dishes', 'hotelndish', 'foofsd', 'foofsdsdsd', 'bakery_items']);
-let customCategories = (JSON.parse(localStorage.getItem('dropzyy_custom_categories')) || []).filter(c => !PURGED_UNUSED_CATS.has(c.id));
-// custom categories stored in memory and db
+let customCategories = [];
 let CATEGORIES = [...DEFAULT_CATEGORIES];
 customCategories.forEach(c => {
     if (!CATEGORIES.some(cat => cat.id === c.id)) {
@@ -422,112 +417,75 @@ customCategories.forEach(c => {
     }
 });
 
-// Registered Accounts Persistence
-// SECURITY OVERHAUL: Enforce Zero-Leak Client Storage Policy
-// 1. Before login: Absolutely NO database tables, cached products, blocked contacts, or settings in localStorage.
-// 2. After login: ONLY { "username": "..." } is stored in localStorage.
-// 3. User roles can NEVER be manipulated via DevTools / localStorage tampering.
-
-const DB_CACHE_KEYS_TO_PURGE = [
+// ==============================================================================
+// 🛡️ DATA PRIVACY & SECURITY SAFEGUARD: ZERO DATABASE DUMP IN LOCALSTORAGE
+// Completely wipe all database items, users, passwords, and sensitive settings
+// from client browser localStorage. Data is securely held in-memory and synced via API.
+// ==============================================================================
+const SENSITIVE_STORAGE_KEYS = [
+    'dropzyy_registered_users',
+    'freshkart_registered_users',
     'dropzyy_all_products_cache',
-    'dropzyy_banner_slides',
-    'dropzyy_blocked_contacts',
-    'dropzyy_custom_categories',
     'dropzyy_custom_products',
+    'dropzyy_custom_categories',
+    'dropzyy_delivery_settings',
+    'dropzyy_supplier_store_images',
     'dropzyy_deleted_products',
     'dropzyy_deleted_restaurants',
-    'dropzyy_delivery_settings',
+    'dropzyy_blocked_contacts',
     'dropzyy_orders_history',
-    'dropzyy_selected_location',
-    'dropzyy_supplier_store_images',
-    'dropzyy_visitor_id',
-    'dropzyy_registered_users',
-    'dropzyy_auth_token',
-    'freshkart_user',
-    'freshkart_registered_users',
-    'dropzyy_session_user',
-    'dropzyy_user_selected_city'
+    'freshkart_products',
+    'freshkart_cart'
 ];
-
-function purgeDatabaseKeysFromLocalStorage() {
-    try {
-        DB_CACHE_KEYS_TO_PURGE.forEach(key => {
-            localStorage.removeItem(key);
-            sessionStorage.removeItem(key);
-        });
-
-        // Ensure dropzyy_user in localStorage ONLY contains { username: "..." }
-        const raw = localStorage.getItem('dropzyy_user');
-        if (raw) {
-            try {
-                const u = JSON.parse(raw);
-                if (u && u.username) {
-                    localStorage.setItem('dropzyy_user', JSON.stringify({ username: String(u.username).trim() }));
-                } else {
-                    localStorage.removeItem('dropzyy_user');
-                }
-            } catch (e) {
-                localStorage.removeItem('dropzyy_user');
-            }
-        }
-    } catch (e) {}
-}
-
-// Run immediately on script evaluation
-purgeDatabaseKeysFromLocalStorage();
-
-function persistRegisteredUsers() { purgeDatabaseKeysFromLocalStorage(); }
-
-const DEFAULT_REGISTERED_USERS = [
-    { id: 1, username: 'yashpatil', email: 'yashpatil@dropzyy.com', password: '12528289Yash@', full_name: 'Yash Patil (System Admin)', role: 'admin', city: 'Savda' },
-    { id: 2, username: 'admin', email: 'admin@dropzyy.com', password: 'Dropzyy@Admin#2026!', full_name: 'System Administrator', role: 'admin', city: 'Savda' },
-    { id: 3, username: 'supplier', email: 'supplier@dropzyy.com', password: 'Supplier@Dropzyy#2026!', full_name: 'Desi Kirana Wholesaler', role: 'supplier', supplier_company_name: 'Ramesh Kirana Wholesale Co.', city: 'Savda' },
-    { id: 22, username: 'banjos', email: 'banjos@dropzyy.com', password: 'Banjos@123', full_name: 'Banjos Cafe', role: 'supplier', supplier_company_name: 'Banjos Cafe', city: 'Savda-Faizpur', store_open: true, open_time: '08:00 AM', close_time: '10:00 PM', menu_card_image: 'uploads/banjos_menu_card_page_1.jpg' }
-];
-
-let registeredUsers = [...DEFAULT_REGISTERED_USERS];
-// Purge legacy deleted test accounts from local storage
-registeredUsers = registeredUsers.filter(u => {
-    if (!u) return false;
-    const uName = (u.username || '').toLowerCase();
-    const cName = (u.supplier_company_name || '').toLowerCase();
-    if (uName === 'bhupesh11' || cName === 'bhupeshkirana') return false;
-    if (uName === 'dhanji' || cName === 'dhanji') return false;
-    if (uName === 'ritesh@123') return false;
-    return true;
+SENSITIVE_STORAGE_KEYS.forEach(k => {
+    try { localStorage.removeItem(k); } catch(e) {}
+    try { sessionStorage.removeItem(k); } catch(e) {}
 });
 
-// Always ensure banjos has the valid menu_card_image attached
-const bUser = registeredUsers.find(u => u && (u.username === 'banjos' || String(u.supplier_company_name || '').toLowerCase().includes('banjo')));
-if (bUser) {
-    bUser.menu_card_image = 'uploads/banjos_menu_card_page_1.jpg';
-    try { persistRegisteredUsers(); } catch(e){}
+// Sanitize dropzyy_user in localStorage so it ONLY ever stores { username: "..." }
+try {
+    const rawUser = localStorage.getItem('dropzyy_user') || sessionStorage.getItem('dropzyy_user');
+    if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        const uOnly = { username: parsed.username || parsed.sub || '' };
+        localStorage.setItem('dropzyy_user', JSON.stringify(uOnly));
+        sessionStorage.setItem('dropzyy_user', JSON.stringify(uOnly));
+    }
+} catch (e) {}
+
+function parseJwtToken(token) {
+    if (!token || typeof token !== 'string') return null;
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
 }
+
+// Default in-memory partner stores catalog metadata (NO PASSWORDS, NO CREDENTIALS)
+const DEFAULT_PARTNER_STORES = [
+    { id: 22, username: 'banjos', full_name: 'Banjos Cafe', role: 'supplier', supplier_company_name: 'Banjos Cafe', city: 'Savda-Faizpur', store_open: true, open_time: '08:00 AM', close_time: '10:00 PM', menu_card_image: 'uploads/banjos_menu_card_page_1.jpg' },
+    { id: 3, username: 'supplier', full_name: 'Desi Kirana Wholesaler', role: 'supplier', supplier_company_name: 'Ramesh Kirana Wholesale Co.', city: 'Savda', store_open: true, open_time: '08:00 AM', close_time: '10:00 PM' }
+];
+
+// In-memory partner directory (populated live from /api/restaurants; NEVER written to localStorage)
+let registeredUsers = [...DEFAULT_PARTNER_STORES];
 
 // Ensure Banjos Cafe is restored if previously in deleted restaurants
 try {
     const delRest = JSON.parse(localStorage.getItem('dropzyy_deleted_restaurants') || '[]');
     if (Array.isArray(delRest) && delRest.length > 0) {
         const cleaned = delRest.filter(r => !String(r).toLowerCase().includes('banjo'));
-        /* cleaned */
-}
+        /* zero-storage */
+    }
 } catch (e) {}
-
-DEFAULT_REGISTERED_USERS.forEach(defaultUser => {
-    const existing = registeredUsers.find(u => u.username.toLowerCase() === defaultUser.username.toLowerCase());
-    if (!existing) {
-        registeredUsers.unshift(defaultUser);
-    } else if (defaultUser.city && (!existing.city || existing.city === 'Mumbai')) {
-        existing.city = defaultUser.city;
-    }
-});
-// Ensure any suppliers without city get Savda as sensible default
-registeredUsers.forEach(u => {
-    if (u && (u.role === 'supplier' || u.supplier_company_name) && (!u.city || u.city === 'Mumbai')) {
-        u.city = 'Savda';
-    }
-});
-persistRegisteredUsers();
 
 const DEFAULT_COUPONS = [
     { id: 'c1', code: 'KIRANA10', discount_type: 'percent', discount_value: 10, discount: 10, min_order: 0, usage_limit: 'unlimited', used_by: [], target: 'everyone', targetUser: '', description: '10% OFF on all orders' },
@@ -555,58 +513,14 @@ window.isProductOnline = function(p) {
 
 // Products Local Persistence - Guarantees products & online/offline toggles persist on page refresh
 let deletedProductsList = [];
-try {
-    deletedProductsList = JSON.parse(localStorage.getItem('dropzyy_deleted_products') || '[]');
-} catch (e) {
-    deletedProductsList = [];
-}
 let deletedRestaurantsList = [];
-try {
-    deletedRestaurantsList = JSON.parse(localStorage.getItem('dropzyy_deleted_restaurants') || '[]');
-} catch (e) {
-    deletedRestaurantsList = [];
-}
-
 let customProducts = [];
-try {
-    customProducts = JSON.parse(localStorage.getItem('dropzyy_custom_products') || '[]');
-} catch (e) {
-    customProducts = [];
-}
 let cachedProducts = [];
-try {
-    cachedProducts = JSON.parse(localStorage.getItem('dropzyy_all_products_cache') || '[]');
-} catch (e) {
-    cachedProducts = [];
-}
-let storeProducts = (cachedProducts && cachedProducts.length > 0)
-    ? cachedProducts
-    : [...customProducts, ...DEFAULT_PRODUCTS.filter(dp => !customProducts.some(cp => String(cp.id) === String(dp.id)))];
-
-// Filter out any previously deleted items so they never resurrect
-storeProducts = storeProducts.filter(p => {
-    if (!p) return false;
-    const pId = String(p.id).toLowerCase();
-    const pTitle = String(p.title || '').trim().toLowerCase();
-    const pSup = String(p.supplier_name || p.supplierName || '').trim().toLowerCase();
-    const pComp = String(p.supplier_company_name || '').trim().toLowerCase();
-    if (deletedProductsList.some(d => d.toLowerCase() === pId || d.toLowerCase() === pTitle)) return false;
-    if (deletedRestaurantsList.some(d => d.toLowerCase() === pSup || d.toLowerCase() === pComp)) return false;
-    return true;
-});
+let storeProducts = [...DEFAULT_PRODUCTS];
 
 function persistCustomProducts() {
-    try {
-        if (typeof state !== 'undefined' && state && Array.isArray(state.products)) {
-            // Save full products cache with updated online/offline flags
-            /* cleaned */
-const defaultIds = new Set(DEFAULT_PRODUCTS.map(dp => String(dp.id)));
-            const customItems = state.products.filter(p => !defaultIds.has(String(p.id)) || p.customAdded);
-            /* cleaned */
-}
-    } catch (e) {
-        console.warn('[STORAGE] Could not persist custom products:', e);
-    }
+    // Products are securely persisted in MongoDB Atlas & SQLite via REST API endpoints.
+    // Client state is kept purely in memory (zero localStorage dumping).
 }
 
 // 2. STATE MANAGEMENT
@@ -617,98 +531,50 @@ let state = {
     ordersHistory: [],
     currentUser: (() => {
         try {
-            purgeDatabaseKeysFromLocalStorage();
-            sessionStorage.removeItem('dropzyy_session_user'); // Never store user profile in sessionStorage (Amazon/Flipkart style)
+            const raw = localStorage.getItem('dropzyy_user') || 
+                        sessionStorage.getItem('dropzyy_user') || 
+                        localStorage.getItem('freshkart_user') || 
+                        sessionStorage.getItem('freshkart_user');
+            const token = localStorage.getItem('dropzyy_auth_token') || 
+                          sessionStorage.getItem('dropzyy_auth_token');
+            if (!raw && !token) return null;
 
-            const sessionToken = sessionStorage.getItem('dropzyy_auth_token');
-            const rawUser = localStorage.getItem('dropzyy_user');
-            let storedUsername = '';
-            if (rawUser) {
+            let uName = '';
+            if (raw) {
                 try {
-                    const parsed = JSON.parse(rawUser);
-                    if (parsed && parsed.username) storedUsername = String(parsed.username).trim();
-                } catch (e) {}
+                    const parsed = JSON.parse(raw);
+                    uName = parsed.username || '';
+                } catch(e){}
             }
 
-            // If no token or no username, user is not logged in
-            if (!sessionToken && !storedUsername) {
-                localStorage.removeItem('dropzyy_user');
-                sessionStorage.removeItem('dropzyy_auth_token');
-                return null;
+            // Decode role & sub from JWT token in memory
+            let tokenPayload = null;
+            if (token) {
+                tokenPayload = parseJwtToken(token);
             }
 
-            // Extract verified identity strictly from cryptographically signed JWT token
-            let tokenUsername = null;
-            let tokenRole = 'customer';
-            let tokenId = null;
+            if (!uName && tokenPayload && tokenPayload.username) {
+                uName = tokenPayload.username;
+            }
 
-            if (sessionToken) {
+            if (!uName && !tokenPayload) return null;
+
+            // Keep dropzyy_user in storage strictly minimal: ONLY { username: "..." }
+            if (uName) {
                 try {
-                    const parts = sessionToken.split('.');
-                    if (parts.length === 3) {
-                        const payload = JSON.parse(atob(parts[1]));
-                        if (payload) {
-                            tokenUsername = payload.sub || payload.username || null;
-                            tokenRole = payload.role || 'customer';
-                            tokenId = payload.user_id || payload.sub_id || null;
-                        }
-                    }
-                } catch(e) {}
+                    const minimalStr = JSON.stringify({ username: uName });
+                    localStorage.setItem('dropzyy_user', minimalStr);
+                    sessionStorage.setItem('dropzyy_user', minimalStr);
+                } catch(e){}
             }
 
-            const activeUsername = tokenUsername || storedUsername;
-            if (!activeUsername) return null;
-
-            // In local/demo mode without token, check verified registered users (role cannot be altered by storage)
-            let verifiedRole = 'customer';
-            const regUser = (typeof DEFAULT_REGISTERED_USERS !== 'undefined' && Array.isArray(DEFAULT_REGISTERED_USERS))
-                ? DEFAULT_REGISTERED_USERS.find(u => (u.username || '').toLowerCase() === activeUsername.toLowerCase())
-                : null;
-
-            if (tokenRole && tokenRole !== 'customer') {
-                verifiedRole = tokenRole;
-            } else if (regUser) {
-                verifiedRole = regUser.role || 'customer';
-            }
-
-            // Ensure localStorage strictly only contains { username: activeUsername }
-            localStorage.setItem('dropzyy_user', JSON.stringify({ username: activeUsername }));
-
-            const inMemoryUser = {
-                id: tokenId || (regUser ? regUser.id : ''),
-                username: activeUsername,
-                role: verifiedRole,
-                full_name: (regUser ? regUser.full_name : activeUsername),
-                email: (regUser ? regUser.email : `${activeUsername}@dropzyy.com`),
-                city: (regUser ? regUser.city : ''),
-                supplier_company_name: (regUser ? regUser.supplier_company_name : ''),
-                store_open: regUser ? regUser.store_open !== false : true,
-                token: sessionToken || ''
+            return {
+                id: tokenPayload ? tokenPayload.sub : null,
+                username: uName,
+                role: tokenPayload ? tokenPayload.role : 'customer',
+                full_name: uName,
+                access_token: token
             };
-
-            // Asynchronously fetch fresh verified profile from backend /api/auth/me
-            if (sessionToken && typeof fetch === 'function') {
-                setTimeout(async () => {
-                    try {
-                        const res = await fetch(`${API_BASE_URL}/auth/me`, {
-                            headers: { 'Authorization': `Bearer ${sessionToken}` }
-                        });
-                        if (res.ok) {
-                            const me = await res.json();
-                            if (me && state && state.currentUser) {
-                                state.currentUser.full_name = me.full_name || state.currentUser.full_name;
-                                state.currentUser.email = me.email || state.currentUser.email;
-                                state.currentUser.city = me.city || state.currentUser.city;
-                                state.currentUser.role = me.role || state.currentUser.role;
-                                state.currentUser.supplier_company_name = me.supplier_company_name || state.currentUser.supplier_company_name;
-                                if (typeof updateUserAuthUI === 'function') updateUserAuthUI();
-                            }
-                        }
-                    } catch(err) {}
-                }, 100);
-            }
-
-            return inMemoryUser;
         } catch (e) {
             return null;
         }
@@ -893,9 +759,36 @@ const closeWishlistBtn = document.getElementById('closeWishlistBtn');
 const wishlistContainer = document.getElementById('wishlistContainer');
 
 // 4. INITIALIZATION
+async function fetchUserProfileFromAPI() {
+    const token = localStorage.getItem('dropzyy_auth_token') || (state.currentUser && state.currentUser.access_token);
+    if (!token) return;
+    try {
+        const res = await fetchWithTimeout(`${API_BASE_URL}/auth/me?_t=${Date.now()}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Cache-Control': 'no-cache'
+            }
+        }, 8000);
+        if (res && res.ok) {
+            const profile = await res.json();
+            // Merge full profile strictly into runtime memory
+            state.currentUser = {
+                ...state.currentUser,
+                ...profile,
+                access_token: token
+            };
+            // Guarantee localStorage dropzyy_user ONLY holds { username: "..." }
+            saveUserSession(state.currentUser);
+            updateUserAuthUI();
+            if (typeof renderRestaurants === 'function') renderRestaurants();
+        }
+    } catch (err) {}
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     updateUserAuthUI();
     await Promise.allSettled([
+        fetchUserProfileFromAPI(),
         fetchProductsFromAPI(),
         fetchRestaurantsFromAPI(),
         fetchCouponsFromAPI(),
@@ -984,9 +877,8 @@ async function fetchRestaurantsFromAPI() {
                 });
 
                 try {
-                    persistRegisteredUsers();
-                    /* cleaned */
-} catch (e) {}
+                    /* zero-storage */
+                } catch (e) {}
 
                 if (typeof renderRestaurants === 'function') renderRestaurants();
                 if (typeof renderProducts === 'function') renderProducts();
@@ -1000,20 +892,31 @@ async function fetchRestaurantsFromAPI() {
     }
 }
 
-// Auto-sync restaurant timings, open/closed live status, and store banner photos
+// Auto-sync all live products, stores, categories, and calendar across all mobile & desktop devices without cache
+async function refreshAllLiveData() {
+    try {
+        await Promise.allSettled([
+            typeof fetchProductsFromAPI === 'function' ? fetchProductsFromAPI() : Promise.resolve(),
+            typeof fetchRestaurantsFromAPI === 'function' ? fetchRestaurantsFromAPI() : Promise.resolve(),
+            typeof fetchCategoriesFromAPI === 'function' ? fetchCategoriesFromAPI() : Promise.resolve(),
+            typeof fetchAvailabilityFromAPI === 'function' ? fetchAvailabilityFromAPI() : Promise.resolve()
+        ]);
+    } catch (e) {}
+}
 if (typeof window !== 'undefined') {
-    window.addEventListener('focus', () => {
-        if (typeof fetchRestaurantsFromAPI === 'function') fetchRestaurantsFromAPI();
+    window.addEventListener('focus', refreshAllLiveData);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            refreshAllLiveData();
+        }
     });
-    setInterval(() => {
-        if (typeof fetchRestaurantsFromAPI === 'function') fetchRestaurantsFromAPI();
-    }, 30000);
+    setInterval(refreshAllLiveData, 15000);
 }
 
 // 4.1 FETCH AVAILABILITY CALENDAR DATA
 async function fetchAvailabilityFromAPI() {
     try {
-        const response = await fetchWithTimeout(`${API_BASE_URL}/supplier/availability`, {}, 5000);
+        const response = await fetchWithTimeout(`${API_BASE_URL}/supplier/availability?_t=${Date.now()}`, { headers: { "Cache-Control": "no-cache" } }, 8000);
         if (response && response.ok) {
             const data = await response.json();
             if (Array.isArray(data)) {
@@ -1035,10 +938,27 @@ async function fetchAvailabilityFromAPI() {
 // 5. FETCH PRODUCTS FROM FASTAPI REST API
 async function fetchProductsFromAPI() {
     try {
-        const response = await fetchWithTimeout(`${API_BASE_URL}/products`, {}, 15000);
+        const response = await fetchWithTimeout(`${API_BASE_URL}/products?_t=${Date.now()}`, {
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+        }, 15000);
         if (response && response.ok) {
             const data = await response.json();
             if (data && Array.isArray(data)) {
+                // Auto-register any categories from live products into CATEGORIES list
+                data.forEach(p => {
+                    if (p.category && !CATEGORIES.some(cat => cat.id === p.category)) {
+                        const formattedCatName = p.category.charAt(0).toUpperCase() + p.category.slice(1);
+                        CATEGORIES.push({
+                            id: p.category,
+                            name: formattedCatName,
+                            icon: 'fa-solid fa-layer-group',
+                            count: 0
+                        });
+                    }
+                });
                 let deletedProds = [];
                 try {
                     deletedProds = JSON.parse(localStorage.getItem('dropzyy_deleted_products') || '[]');
@@ -1106,7 +1026,7 @@ async function fetchProductsFromAPI() {
 
 async function fetchCouponsFromAPI() {
     try {
-        const response = await fetchWithTimeout(`${API_BASE_URL}/coupons`, {}, 15000);
+        const response = await fetchWithTimeout(`${API_BASE_URL}/coupons?_t=${Date.now()}`, { headers: { "Cache-Control": "no-cache" } }, 15000);
         if (response && response.ok) {
             const data = await response.json();
             if (Array.isArray(data)) {
@@ -1136,7 +1056,7 @@ async function fetchCouponsFromAPI() {
 
 async function fetchLocationsFromAPI() {
     try {
-        const response = await fetchWithTimeout(`${API_BASE_URL}/locations`, {}, 15000);
+        const response = await fetchWithTimeout(`${API_BASE_URL}/locations?_t=${Date.now()}`, { headers: { "Cache-Control": "no-cache" } }, 15000);
         if (response && response.ok) {
             const data = await response.json();
             if (Array.isArray(data)) {
@@ -1147,7 +1067,6 @@ async function fetchLocationsFromAPI() {
                 }));
                 if (typeof renderServiceableCitiesDatalist === 'function') renderServiceableCitiesDatalist();
                 if (typeof renderAdminLocationsList === 'function') renderAdminLocationsList();
-                if (typeof renderHeaderLocationSelector === 'function') renderHeaderLocationSelector();
             }
         }
     } catch (err) {}
@@ -1210,45 +1129,32 @@ window.getCategoryItemCount = function(catId) {
 
 // 6. RENDER CATEGORIES
 function renderCategories() {
-    // 1. Render in main categoryGrid
-    if (categoryGrid) {
-        categoryGrid.innerHTML = CATEGORIES.map(cat => {
-            const count = (typeof window.getCategoryItemCount === 'function') ? window.getCategoryItemCount(cat.id) : (cat.count || 0);
-            return `
-                <div class="category-card ${state.activeCategory === cat.id ? 'active' : ''}" data-category="${cat.id}" onclick="selectCategoryFilter('${cat.id}')">
-                    <div class="category-icon-box">
-                        <i class="${cat.icon || 'fa-solid fa-layer-group'}"></i>
-                    </div>
-                    <div class="category-name">${cat.name}</div>
-                    <div class="category-count">${count > 0 ? `${count} Items` : 'Browse'}</div>
+    if (!categoryGrid) return;
+
+    // Filter out categories that have 0 products added (keep 'all' as top filter)
+    const validCats = CATEGORIES.filter(cat => {
+        if (cat.id === 'all') return true;
+        return window.getCategoryItemCount(cat.id) > 0;
+    });
+
+    // If active category was removed, reset to 'all'
+    if (state.activeCategory !== 'all' && !validCats.some(c => c.id === state.activeCategory)) {
+        state.activeCategory = 'all';
+    }
+
+    categoryGrid.innerHTML = validCats.map(cat => {
+        const count = window.getCategoryItemCount(cat.id);
+        return `
+            <div class="category-card ${state.activeCategory === cat.id ? 'active' : ''}" data-category="${cat.id}">
+                <div class="category-icon-box">
+                    <i class="${cat.icon || 'fa-solid fa-layer-group'}"></i>
                 </div>
-            `;
-        }).join('');
-    }
-
-    // 2. Render in mobile horizontal categories quick strip
-    const mobileStrip = document.getElementById('mobileCategoriesStrip');
-    if (mobileStrip) {
-        mobileStrip.innerHTML = CATEGORIES.map(cat => `
-            <button type="button" class="mobile-cat-pill ${state.activeCategory === cat.id ? 'active' : ''}" onclick="selectCategoryFilter('${cat.id}')">
-                <i class="${cat.icon || 'fa-solid fa-layer-group'}"></i>
-                <span>${cat.name}</span>
-            </button>
-        `).join('');
-    }
+                <div class="category-name">${cat.name}</div>
+                <div class="category-count">${count} ${count === 1 ? 'Item' : 'Items'} Available</div>
+            </div>
+        `;
+    }).join('');
 }
-
-window.selectCategoryFilter = function(catId) {
-    if (typeof state === 'undefined') return;
-    state.activeCategory = catId;
-    if (typeof renderCategories === 'function') renderCategories();
-    if (typeof renderCategoryPills === 'function') renderCategoryPills();
-    if (typeof renderProducts === 'function') renderProducts();
-    const prodSec = document.getElementById('productsSection');
-    if (prodSec) {
-        prodSec.scrollIntoView({ behavior: 'smooth' });
-    }
-};
 
 // Time parsing & conversion helpers (supporting 12-hour AM/PM and 24-hour formats)
 window.parseTimeComponents = function(timeStr) {
@@ -2411,31 +2317,7 @@ function renderProducts() {
             (p.category && p.category.toLowerCase().includes(search)) ||
             (p.description && p.description.toLowerCase().includes(search)) ||
             (p.supplierName && p.supplierName.toLowerCase().includes(search));
-        
-        if (!matchesCategory || !matchesSearch) return false;
-
-        // Pure VEG Filter Check
-        if (state.vegOnlyFilter) {
-            const isNonVeg = (p.food_type && p.food_type.toLowerCase() === 'non_veg') ||
-                (p.dietary && p.dietary.toLowerCase() === 'non_veg') ||
-                (p.title && /(chicken|mutton|meat|fish|egg|prawn|beef|pork|biryani\s+chicken)/i.test(p.title)) ||
-                (p.description && /(chicken|mutton|meat|fish|egg|prawn|beef|pork)/i.test(p.description));
-            if (isNonVeg) return false;
-        }
-
-        // Quick Filter: Near & Fast (Open stores)
-        if (state.quickNearFastFilter) {
-            const sc = isSupplierStoreOpen(p);
-            if (!sc.isOpen) return false;
-        }
-
-        // Quick Filter: Meals Under 250
-        if (state.quickMealsUnder250) {
-            const priceVal = Number(p.price) || 0;
-            if (priceVal > 250) return false;
-        }
-
-        return true;
+        return matchesCategory && matchesSearch;
     });
 
     // Supplier Product Visibility Restriction: Suppliers in their own view see their own products
@@ -2926,49 +2808,30 @@ function updateUserAuthUI() {
         if (mobileOrdersBtn) mobileOrdersBtn.classList.remove('hidden');
 
         const adminToolbarRow = document.getElementById('adminToolbarRow');
+
         const adminAnalyticsBtn = document.getElementById('adminAnalyticsBtn');
-        const adminCategoryBtn = document.getElementById('adminCategoryBtn');
-        const adminToolbarPosterBtn = document.getElementById('adminToolbarPosterBtn');
-        const mobileAdminNavBtn = document.getElementById('mobileAdminNavBtn');
-        const mobileAnalyticsNavBtn = document.getElementById('mobileAnalyticsNavBtn');
-        const mobileAddItemNavBtn = document.getElementById('mobileAddItemNavBtn');
 
         if (state.currentUser.role === 'admin' || state.currentUser.role === 'sub_admin') {
             if (adminControlCenterBtn) adminControlCenterBtn.classList.remove('hidden');
             if (adminAnalyticsBtn) adminAnalyticsBtn.classList.remove('hidden');
             if (adminPortalBtn) adminPortalBtn.classList.remove('hidden');
-            if (adminCategoryBtn) adminCategoryBtn.classList.remove('hidden');
-            if (adminToolbarPosterBtn) adminToolbarPosterBtn.classList.remove('hidden');
             if (trackBookingsBtn) trackBookingsBtn.classList.remove('hidden');
             if (adminToolbarRow) adminToolbarRow.classList.remove('hidden');
             if (headerNotificationBtn) headerNotificationBtn.classList.remove('hidden');
-            if (mobileAdminNavBtn) mobileAdminNavBtn.classList.remove('hidden');
-            if (mobileAnalyticsNavBtn) mobileAnalyticsNavBtn.classList.remove('hidden');
-            if (mobileAddItemNavBtn) mobileAddItemNavBtn.classList.remove('hidden');
         } else if (state.currentUser.role === 'supplier') {
             if (adminControlCenterBtn) adminControlCenterBtn.classList.add('hidden');
             if (adminAnalyticsBtn) adminAnalyticsBtn.classList.add('hidden');
             if (adminPortalBtn) adminPortalBtn.classList.remove('hidden');
-            if (adminCategoryBtn) adminCategoryBtn.classList.add('hidden');
-            if (adminToolbarPosterBtn) adminToolbarPosterBtn.classList.add('hidden');
             if (trackBookingsBtn) trackBookingsBtn.classList.remove('hidden');
             if (adminToolbarRow) adminToolbarRow.classList.remove('hidden');
             if (headerNotificationBtn) headerNotificationBtn.classList.remove('hidden');
-            if (mobileAdminNavBtn) mobileAdminNavBtn.classList.add('hidden');
-            if (mobileAnalyticsNavBtn) mobileAnalyticsNavBtn.classList.add('hidden');
-            if (mobileAddItemNavBtn) mobileAddItemNavBtn.classList.remove('hidden');
         } else {
             if (adminControlCenterBtn) adminControlCenterBtn.classList.add('hidden');
             if (adminAnalyticsBtn) adminAnalyticsBtn.classList.add('hidden');
             if (adminPortalBtn) adminPortalBtn.classList.add('hidden');
-            if (adminCategoryBtn) adminCategoryBtn.classList.add('hidden');
-            if (adminToolbarPosterBtn) adminToolbarPosterBtn.classList.add('hidden');
             if (trackBookingsBtn) trackBookingsBtn.classList.add('hidden');
             if (adminToolbarRow) adminToolbarRow.classList.add('hidden');
             if (headerNotificationBtn) headerNotificationBtn.classList.add('hidden');
-            if (mobileAdminNavBtn) mobileAdminNavBtn.classList.add('hidden');
-            if (mobileAnalyticsNavBtn) mobileAnalyticsNavBtn.classList.add('hidden');
-            if (mobileAddItemNavBtn) mobileAddItemNavBtn.classList.add('hidden');
         }
 
 
@@ -3010,18 +2873,7 @@ function updateUserAuthUI() {
         if (mobileOrdersBtn) mobileOrdersBtn.classList.add('hidden');
         if (trackBookingsBtn) trackBookingsBtn.classList.add('hidden');
         if (adminToolbarRow) adminToolbarRow.classList.add('hidden');
-        const mobileAdminNavBtn = document.getElementById('mobileAdminNavBtn');
-        const mobileAnalyticsNavBtn = document.getElementById('mobileAnalyticsNavBtn');
-        const mobileAddItemNavBtn = document.getElementById('mobileAddItemNavBtn');
-        if (mobileAdminNavBtn) mobileAdminNavBtn.classList.add('hidden');
-        if (mobileAnalyticsNavBtn) mobileAnalyticsNavBtn.classList.add('hidden');
-        if (mobileAddItemNavBtn) mobileAddItemNavBtn.classList.add('hidden');
     }
-
-            const mobileUserAuthWrapper = document.getElementById('mobileUserAuthWrapper');
-        if (mobileUserAuthWrapper && userAuthWrapper) {
-            mobileUserAuthWrapper.innerHTML = userAuthWrapper.innerHTML;
-        }
 
     if (typeof renderRestaurants === 'function') {
         renderRestaurants();
@@ -3029,121 +2881,72 @@ function updateUserAuthUI() {
 }
 
 window.saveUserSession = function(user) {
-    if (!user || !user.username) {
-        localStorage.removeItem('dropzyy_user');
-        sessionStorage.removeItem('dropzyy_auth_token');
-        sessionStorage.removeItem('dropzyy_session_user');
-        return;
-    }
+    if (!user) return;
     try {
-        const username = String(user.username).trim();
+        const uName = String(user.username || user.email || '').trim();
+        // REQUIREMENT: ONLY store the username in dropzyy_user - NEVER password, role, email, address, etc.
+        const minimalUser = { username: uName };
+        const str = JSON.stringify(minimalUser);
+        sessionStorage.setItem('dropzyy_user', str);
+        localStorage.setItem('dropzyy_user', str);
 
-        // Security (Amazon/Flipkart Standard):
-        // 1. In localStorage: ONLY { username: ... } is stored!
-        // No roles, no passwords, no emails, no sensitive data.
-        localStorage.clear();
-        localStorage.setItem('dropzyy_user', JSON.stringify({ username: username }));
-
-        // 2. In sessionStorage: ONLY the cryptographically signed JWT auth token is stored!
-        // NEVER store user profile or role in sessionStorage so no one can tamper with or view it in inspect.
-        sessionStorage.removeItem('dropzyy_session_user');
         const tok = user.access_token || user.token;
         if (tok) {
             sessionStorage.setItem('dropzyy_auth_token', tok);
-        } else {
-            sessionStorage.removeItem('dropzyy_auth_token');
+            localStorage.setItem('dropzyy_auth_token', tok);
         }
-
-        // 3. User object with role and profile is stored STRICTLY IN-MEMORY:
-        state.currentUser = {
-            id: user.id || user._id || '',
-            username: username,
-            role: user.role || 'customer',
-            full_name: user.full_name || username,
-            email: user.email || '',
-            city: user.city || '',
-            supplier_company_name: user.supplier_company_name || '',
-            store_open: user.store_open !== false,
-            token: tok || ''
-        };
     } catch (e) {}
 };
 
 async function loginUser(username, password) {
     if (!username || !password) return;
 
-    const cleanInput = username.trim().toLowerCase();
-
-    const cleanAlpha = cleanInput.replace(/[^a-z0-9]/g, '');
-
-    // 1. Check local registered users list for instant responsiveness
-    const matchedUser = registeredUsers.find(u => {
-        const uClean = (u.username || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const cClean = (u.supplier_company_name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const uMatches = (u.username && u.username.toLowerCase() === cleanInput) || 
-                         (u.email && u.email.toLowerCase() === cleanInput) ||
-                         ((cleanAlpha === 'banjos' || cleanAlpha === 'banjoscafe' || cleanAlpha === 'banjo') && (uClean === 'banjos' || cClean.includes('banjo')));
-        if (!uMatches) return false;
-        if (u.password === password) return true;
-        if (cleanInput === 'admin' && (password === 'admin123' || password === 'Dropzyy@Admin#2026!')) return true;
-        if (cleanInput === 'supplier' && (password === 'supplier123' || password === 'Supplier@Dropzyy#2026!')) return true;
-        if (cleanInput === 'yashpatil' && password === '12528289Yash@') return true;
-        if ((cleanAlpha === 'banjos' || cleanAlpha === 'banjoscafe' || cleanAlpha === 'banjo' || cleanInput === 'banjos@dropzyy.com') && 
-            (password === 'Banjos@123' || password === 'banjos@123' || password === 'Banjos@Dropzyy#2026!' || password === 'banjos' || password === '123456')) {
-            return true;
-        }
-        return false;
-    });
-    
-    if (matchedUser) {
-        state.currentUser = { ...matchedUser };
-        saveUserSession(state.currentUser);
-        updateUserAuthUI();
-        renderProducts();
-        closeModals();
-        showToast(`Logged in as <strong>${matchedUser.supplier_company_name || matchedUser.full_name}</strong> (${matchedUser.role})!`, 'success');
-
-        // Request fresh JWT bearer token from backend so product mutations are authenticated
-        fetchWithTimeout(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        }, 5000).then(res => res && res.ok && res.json()).then(apiUser => {
-            if (apiUser && (apiUser.access_token || apiUser.token)) {
-                state.currentUser = { ...matchedUser, ...apiUser };
-                saveUserSession(state.currentUser);
-            }
-        }).catch(() => {});
-        return;
+    // Show authentication spinner on login button
+    const loginSubmitBtn = document.querySelector('#loginForm button[type="submit"]');
+    const originalText = loginSubmitBtn ? loginSubmitBtn.innerHTML : '';
+    if (loginSubmitBtn) {
+        loginSubmitBtn.disabled = true;
+        loginSubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
     }
 
-    // 2. Check REST API
     try {
+        // Authenticate strictly with backend REST API (Bcrypt Hash Verification & JWT)
         const response = await fetchWithTimeout(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
-        }, 5000);
+        }, 12000);
 
         if (response && response.ok) {
             const user = await response.json();
-            state.currentUser = user;
-            saveUserSession(user);
-            if (!registeredUsers.some(u => (u.username || '').toLowerCase() === (user.username || '').toLowerCase())) {
-                registeredUsers.push(user);
-                persistRegisteredUsers();
-            }
+            // Securely strip any sensitive password keys before updating state
+            const cleanUser = { ...user };
+            delete cleanUser.password;
+            delete cleanUser.password_hash;
+            state.currentUser = cleanUser;
+            saveUserSession(cleanUser);
             updateUserAuthUI();
             renderProducts();
+            if (typeof renderRestaurants === 'function') renderRestaurants();
             closeModals();
-            showToast(`Welcome back, <strong>${user.supplier_company_name || user.full_name}</strong> (${user.role})!`, 'success');
-            return;
+            showToast(`Welcome back, <strong>${user.supplier_company_name || user.full_name}</strong> (${user.role.toUpperCase()})!`, 'success');
+        } else {
+            let errorMsg = 'Invalid email/username or password. Please verify your credentials.';
+            try {
+                const errData = await response.json();
+                if (errData && errData.detail) errorMsg = errData.detail;
+            } catch (e) {}
+            showToast(errorMsg, 'error');
         }
-    } catch (e) {
-        console.log('FastAPI server offline or unreachable.');
+    } catch (err) {
+        console.error('[LOGIN ERROR]', err);
+        showToast('Login server temporarily unreachable. Please check your connection.', 'error');
+    } finally {
+        if (loginSubmitBtn) {
+            loginSubmitBtn.disabled = false;
+            loginSubmitBtn.innerHTML = originalText;
+        }
     }
-
-    showToast('Invalid email/username or password! Please check credentials.', 'info');
 }
 
 window.handleLoginSubmit = function(e) {
@@ -4026,7 +3829,6 @@ async function registerUser(email, otp, password, fullName, role, supplierCompan
         id: Date.now(),
         username: derivedUsername,
         email: email,
-        password: password,
         full_name: fullName,
         phone: phone,
         role: role,
@@ -4075,13 +3877,16 @@ async function registerUser(email, otp, password, fullName, role, supplierCompan
 
 window.logoutUser = function() {
     state.currentUser = null;
-    localStorage.clear();
-    sessionStorage.clear();
-    purgeDatabaseKeysFromLocalStorage();
+    sessionStorage.removeItem('dropzyy_user'); 
+    sessionStorage.removeItem('freshkart_user');
+    localStorage.removeItem('dropzyy_user'); 
+    localStorage.removeItem('freshkart_user');
+    sessionStorage.removeItem('dropzyy_auth_token');
+    localStorage.removeItem('dropzyy_auth_token');
     updateUserAuthUI();
     renderProducts();
-    if (typeof renderCategories === 'function') renderCategories();
-    if (typeof showToast === 'function') showToast('Logged out successfully', 'info');
+    closeModals();
+    showToast('Logged out successfully', 'info');
 };
 
 // 10. ADMINISTRATIVE CONTROL CENTER
@@ -4117,8 +3922,8 @@ window.fetchBlockedContactsFromAPI = async function() {
             const data = await res.json();
             if (Array.isArray(data)) {
                 state.blockedContacts = data;
-                /* cleaned */
-if (typeof renderAdminBlockedList === 'function') renderAdminBlockedList();
+                /* zero-storage */
+                if (typeof renderAdminBlockedList === 'function') renderAdminBlockedList();
                 if (typeof renderAdminUsersDirectory === 'function') renderAdminUsersDirectory();
             }
         }
@@ -4223,8 +4028,9 @@ window.handleAdminBlockSubmit = async function(event) {
                 return true;
             });
             state.blockedContacts.unshift(newRecord);
-            /* cleaned */
-if (phoneInput) phoneInput.value = '';
+            /* zero-storage */
+
+            if (phoneInput) phoneInput.value = '';
             if (emailInput) emailInput.value = '';
 
             renderAdminBlockedList();
@@ -4260,8 +4066,9 @@ window.adminUnblockContact = async function(phone, email, id) {
             if (cleanE && bE && cleanE === bE) return false;
             return true;
         });
-        /* cleaned */
-renderAdminBlockedList();
+        /* zero-storage */
+
+        renderAdminBlockedList();
         renderAdminUsersDirectory();
         showToast(`🔓 <strong>Unblocked:</strong> ${phone || email || 'Customer'} can now place orders normally.`, 'info');
     } catch (e) {
@@ -4305,8 +4112,8 @@ window.adminQuickBlockUser = function(phone, email, username) {
             if (res && res.ok) {
                 const data = await res.json();
                 state.blockedContacts.unshift(data.record || { phone, email, reason: 'Repeated order cancellations', created_at: new Date().toISOString() });
-                /* cleaned */
-renderAdminUsersDirectory();
+                /* zero-storage */
+                renderAdminUsersDirectory();
                 showToast(`🚫 Customer @${username} has been blocked from placing orders!`, 'success');
             }
         }
@@ -4361,8 +4168,8 @@ window.adminQuickBlockFromOrder = function(orderId) {
             if (res && res.ok) {
                 const data = await res.json();
                 state.blockedContacts.unshift(data.record || { phone, email, reason: 'Repeated order cancellations', created_at: new Date().toISOString() });
-                /* cleaned */
-closeCancellationDetailsModal();
+                /* zero-storage */
+                closeCancellationDetailsModal();
                 showToast(`🚫 Customer (${phone || email}) has been blocked!`, 'success');
             }
         }
@@ -4465,7 +4272,7 @@ async function syncUsersWithAPI() {
                             id: u.id,
                             username: u.username,
                             email: u.email,
-                            password: u.password || 'supplier123',
+                            // password never stored on client
                             full_name: u.full_name,
                             role: u.role,
                             supplier_company_name: u.supplier_company_name,
@@ -4492,7 +4299,6 @@ async function syncUsersWithAPI() {
                     return !deletedSet.has(uName) && (!cName || !deletedSet.has(cName));
                 });
 
-                persistRegisteredUsers();
                 if (typeof renderAdminUsersDirectory === 'function') renderAdminUsersDirectory();
                 if (typeof renderRestaurants === 'function') renderRestaurants();
             }
@@ -4648,14 +4454,13 @@ async function executeDeleteUserAccountConfirmed(userId, username) {
 
     const uClean = String(username).toLowerCase();
     registeredUsers = registeredUsers.filter(u => (u.username || '').toLowerCase() !== uClean);
-    persistRegisteredUsers();
 
     // Blacklist deleted user / restaurant
     try {
         let deletedRest = JSON.parse(localStorage.getItem('dropzyy_deleted_restaurants') || '[]');
         if (!deletedRest.includes(uClean)) deletedRest.push(uClean);
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     // Remove products belonging to this user
     state.products = state.products.filter(p => {
@@ -4671,8 +4476,8 @@ async function executeDeleteUserAccountConfirmed(userId, username) {
             const pUid = String(p.supplier_user_id || '').toLowerCase();
             return pSup !== uClean && pUid !== uClean;
         });
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     persistCustomProducts();
 
@@ -4723,7 +4528,7 @@ window.adminEditUserAddress = function(targetUsername) {
     if (modal) modal.classList.add('active');
 };
 
-window.handleAdminSaveUserSubmit = function(e) {
+window.handleAdminSaveUserSubmit = async function(e) {
     if (e) e.preventDefault();
     const username = document.getElementById('adminTargetUsername').value;
     const fullName = document.getElementById('adminUserFullName').value.trim();
@@ -4756,12 +4561,13 @@ window.handleAdminSaveUserSubmit = function(e) {
             city,
             pincode
         };
-        persistRegisteredUsers();
+        const supCompName = registeredUsers[uIdx].supplier_company_name || (role === 'supplier' ? fullName : null);
+        if (supCompName) registeredUsers[uIdx].supplier_company_name = supCompName;
 
         if (window._supplierStoreImages) {
             window._supplierStoreImages[username.toLowerCase()] = { banner_image: bannerImage, menu_card_image: menuCardImage };
-            /* cleaned */
-}
+            /* zero-storage */
+        }
 
         if (state.currentUser && state.currentUser.username.toLowerCase() === username.toLowerCase()) {
             state.currentUser.full_name = fullName;
@@ -4775,10 +4581,37 @@ window.handleAdminSaveUserSubmit = function(e) {
             updateUserAuthUI();
         }
 
+        // Sync role & user details to backend API (MongoDB Atlas + SQLite)
+        try {
+            const token = localStorage.getItem('dropzyy_auth_token') || sessionStorage.getItem('dropzyy_auth_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            await fetchWithTimeout(`${API_BASE_URL}/admin/users/${encodeURIComponent(username)}`, {
+                method: 'PUT',
+                headers: headers,
+                body: JSON.stringify({
+                    username: username,
+                    full_name: fullName,
+                    phone: cleanPhone,
+                    role: role,
+                    supplier_company_name: supCompName,
+                    street_address: streetAddress,
+                    city: city,
+                    pincode: pincode,
+                    banner_image: bannerImage,
+                    menu_card_image: menuCardImage,
+                    store_open: true
+                })
+            }, 10000);
+        } catch (apiErr) {
+            console.warn('[ADMIN USER UPDATE SYNC ERROR]:', apiErr);
+        }
+
         // Sync store images to backend if supplier
         if (role === 'supplier' || registeredUsers[uIdx].supplier_company_name) {
             try {
-                const token = localStorage.getItem('dropzyy_auth_token');
+                const token = localStorage.getItem('dropzyy_auth_token') || sessionStorage.getItem('dropzyy_auth_token');
                 const headers = { 'Content-Type': 'application/json' };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 fetchWithTimeout(`${API_BASE_URL}/supplier/store-images`, {
@@ -4793,9 +4626,17 @@ window.handleAdminSaveUserSubmit = function(e) {
             } catch (err) {}
         }
 
-        if (typeof renderRestaurants === 'function') renderRestaurants();
+        // Immediately trigger fresh live sync across products, restaurants and users
+        await Promise.allSettled([
+            fetchRestaurantsFromAPI(),
+            fetchProductsFromAPI(),
+            syncUsersWithAPI()
+        ]);
 
-        showToast(`Updated details & images for @${username}!`, 'success');
+        if (typeof renderRestaurants === 'function') renderRestaurants();
+        if (typeof renderProducts === 'function') renderProducts();
+
+        showToast(`Updated details & role for @${username}!`, 'success');
         closeModals();
         openAdminControlCenter();
     }
@@ -4820,7 +4661,6 @@ async function createAccountByAdmin(username, password, fullName, role, supplier
         id: Date.now(),
         username: cleanUser,
         email: email,
-        password: password,
         full_name: fullName,
         role: role,
         city: finalCity,
@@ -4829,7 +4669,6 @@ async function createAccountByAdmin(username, password, fullName, role, supplier
     };
 
     registeredUsers.push(newUser);
-    persistRegisteredUsers();
 
     closeModals();
     showToast(`Created <strong>${role.toUpperCase()}</strong> account for @${cleanUser} in ${finalCity}!`, 'success');
@@ -4855,7 +4694,6 @@ async function createAccountByAdmin(username, password, fullName, role, supplier
             const user = await response.json();
             if (user && user.id) {
                 newUser.id = user.id;
-                persistRegisteredUsers();
             }
             showToast(`Supplier account @${cleanUser} synced successfully!`, 'success');
         } else {
@@ -5195,7 +5033,6 @@ window.saveSupplierTimings = async function() {
         registeredUsers[uIdx].close_time = closeTimeFormatted;
         registeredUsers[uIdx].store_open = true;
         if (cityVal) registeredUsers[uIdx].city = cityVal;
-        persistRegisteredUsers();
     }
 
     // Save to backend API
@@ -5294,7 +5131,6 @@ window.toggleSupplierStoreOnline = async function(forceState = null) {
     const uIdx = registeredUsers.findIndex(u => (u.username || '').toLowerCase() === (state.currentUser.username || '').toLowerCase());
     if (uIdx > -1) {
         registeredUsers[uIdx].store_open = newStatus;
-        persistRegisteredUsers();
     }
 
     window.updateSupplierDashboardStatus();
@@ -5400,8 +5236,8 @@ async function executeSupplierDeleteMyRestaurantConfirmed(identifier, storeName)
         let deletedRest = JSON.parse(localStorage.getItem('dropzyy_deleted_restaurants') || '[]');
         if (!deletedRest.includes(targetClean)) deletedRest.push(targetClean);
         if (storeClean && !deletedRest.includes(storeClean)) deletedRest.push(storeClean);
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     // Remove products of this supplier from local memory
     state.products = state.products.filter(p => !doesProductBelongToSupplier(p, state.currentUser));
@@ -5412,8 +5248,8 @@ async function executeSupplierDeleteMyRestaurantConfirmed(identifier, storeName)
     try {
         let cpList = JSON.parse(localStorage.getItem('dropzyy_custom_products') || '[]');
         cpList = cpList.filter(p => !doesProductBelongToSupplier(p, state.currentUser));
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     persistCustomProducts();
 
@@ -5426,7 +5262,6 @@ async function executeSupplierDeleteMyRestaurantConfirmed(identifier, storeName)
     if (uIdx > -1) {
         registeredUsers[uIdx].supplier_company_name = '';
         registeredUsers[uIdx].role = 'customer';
-        persistRegisteredUsers();
     }
 
     closeModals();
@@ -5517,8 +5352,8 @@ async function executeDeleteRestaurantByAdminConfirmed(identifier, cleanName) {
         let deletedRest = JSON.parse(localStorage.getItem('dropzyy_deleted_restaurants') || '[]');
         if (!deletedRest.includes(targetClean)) deletedRest.push(targetClean);
         if (storeClean && !deletedRest.includes(storeClean)) deletedRest.push(storeClean);
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     // Remove products belonging to this restaurant
     state.products = state.products.filter(p => {
@@ -5545,8 +5380,8 @@ async function executeDeleteRestaurantByAdminConfirmed(identifier, cleanName) {
             const pComp = String(p.supplier_company_name || '').trim().toLowerCase();
             return pSup !== targetClean && pUid !== targetClean && pSup !== storeClean && pComp !== storeClean;
         });
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     persistCustomProducts();
 
@@ -5557,7 +5392,6 @@ async function executeDeleteRestaurantByAdminConfirmed(identifier, cleanName) {
         const uFull = (u.full_name || '').toLowerCase();
         return uName !== targetClean && uComp !== targetClean && uComp !== storeClean && uFull !== storeClean;
     });
-    persistRegisteredUsers();
 
     if (typeof closeRestaurantMenuModal === 'function') closeRestaurantMenuModal();
     if (typeof renderRestaurants === 'function') renderRestaurants();
@@ -5591,7 +5425,6 @@ window.adminToggleRestaurantStatus = async function(identifier, storeName, curre
     const uIdx = registeredUsers.findIndex(u => (u.username || '').toLowerCase() === targetClean || (u.supplier_company_name || '').toLowerCase() === targetClean);
     if (uIdx > -1) {
         registeredUsers[uIdx].store_open = newStatus;
-        persistRegisteredUsers();
     }
 
     if (typeof renderRestaurants === 'function') renderRestaurants();
@@ -5872,13 +5705,12 @@ window.saveSupplierStoreImages = async function(silent = false) {
     if (uIdx > -1) {
         registeredUsers[uIdx].banner_image = bannerVal;
         registeredUsers[uIdx].menu_card_image = menuCardVal;
-        persistRegisteredUsers();
     }
 
     if (uname) {
         window._supplierStoreImages[uname] = { banner_image: bannerVal, menu_card_image: menuCardVal };
-        /* cleaned */
-}
+        /* zero-storage */
+    }
 
     try {
         const token = localStorage.getItem('dropzyy_auth_token') || (state.currentUser ? (state.currentUser.access_token || state.currentUser.token) : null);
@@ -6513,8 +6345,8 @@ async function executeDeleteProductConfirmed(productId, product) {
         let deletedProds = JSON.parse(localStorage.getItem('dropzyy_deleted_products') || '[]');
         if (!deletedProds.includes(pIdClean)) deletedProds.push(pIdClean);
         if (pTitleClean && !deletedProds.includes(pTitleClean)) deletedProds.push(pTitleClean);
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     state.products = state.products.filter(p => String(p.id) !== pIdClean);
     if (Array.isArray(storeProducts)) {
@@ -6524,8 +6356,8 @@ async function executeDeleteProductConfirmed(productId, product) {
     try {
         let cpList = JSON.parse(localStorage.getItem('dropzyy_custom_products') || '[]');
         cpList = cpList.filter(p => String(p.id) !== pIdClean && String(p.title || '').trim().toLowerCase() !== pTitleClean);
-        /* cleaned */
-} catch (e) {}
+        /* zero-storage */
+    } catch (e) {}
 
     persistCustomProducts();
     renderProducts();
@@ -8620,7 +8452,9 @@ window.executeCancelOrder = async function(orderId, reason) {
         showToast(`Order <strong>${orderId}</strong> cancelled locally`, 'info');
     }
 
-    /* cleaned */
+    try {
+        /* zero-storage */
+    } catch (e) {}
 
     renderMyOrders();
     if (typeof renderBookingTracking === 'function') renderBookingTracking();
@@ -9367,8 +9201,9 @@ window.handleAddCategorySubmit = function(e) {
         count: 0
     };
     customCategories.push(newCat);
-    /* cleaned */
-CATEGORIES.push(newCat);
+    /* zero-storage */
+
+    CATEGORIES.push(newCat);
     syncAddCategoryToDB(catId, catName, catIcon, targetSupplier);
     renderCategories();
     renderCategoryPills();
@@ -9382,8 +9217,8 @@ CATEGORIES.push(newCat);
 
 window.deleteCategory = function(catId) {
     customCategories = customCategories.filter(c => c.id !== catId);
-    /* cleaned */
-CATEGORIES = CATEGORIES.filter(c => c.id !== catId);
+    /* zero-storage */
+    CATEGORIES = CATEGORIES.filter(c => c.id !== catId);
     syncDeleteCategoryFromDB(catId);
     renderCategories();
     renderCategoryPills();
@@ -9421,7 +9256,12 @@ function renderCategoryPills() {
 
 async function fetchCategoriesFromAPI() {
     try {
-        const res = await fetchWithTimeout(`${API_BASE_URL}/categories`, {}, 2000);
+        const res = await fetchWithTimeout(`${API_BASE_URL}/categories?_t=${Date.now()}`, {
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+        }, 12000);
         if (res && res.ok) {
             const apiCats = await res.json();
             apiCats.forEach(c => {
@@ -9438,6 +9278,9 @@ async function fetchCategoriesFromAPI() {
                     if (c.created_by_supplier) existing.created_by_supplier = c.created_by_supplier;
                 }
             });
+            try {
+                /* zero-storage */
+            } catch(e){}
             renderCategories();
             renderCategoryPills();
             populateCategoryDropdowns();
@@ -9663,30 +9506,7 @@ window.updateRefundStatus = async function(claimId, newStatus) {
     }
 };
 
-
-window._liveBannerSlides = null;
-
-window.loadBannerSlidesFromBackend = async function() {
-    try {
-        const fetchUrl = (typeof API_BASE_URL !== 'undefined') ? `${API_BASE_URL}/banners` : '/api/banners';
-        const res = await fetch(fetchUrl);
-        if (res.ok) {
-            const result = await res.json();
-            if (result && result.data && Array.isArray(result.data) && result.data.length > 0) {
-                window._liveBannerSlides = result.data;
-                if (typeof window.renderBannerSlide === 'function') {
-                    window.renderBannerSlide(0);
-                }
-                console.log('[BANNERS] Loaded', result.data.length, 'live slides from MongoDB Atlas (including uploaded poster)');
-            }
-        }
-    } catch (err) {
-        console.warn('[BANNERS] MongoDB Atlas fetch fallback:', err);
-    }
-};
-
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof window.loadBannerSlidesFromBackend === 'function') window.loadBannerSlidesFromBackend();
     const sOverlay = document.getElementById('supportOverlay');
     if (sOverlay) sOverlay.addEventListener('click', closeModals);
     
@@ -9733,10 +9553,10 @@ let restaurantRevenueChartInstance = null;
  */
 window.trackWebsiteVisit = async function() {
     try {
-        let visitorId = window._visitorId;
+        let visitorId = localStorage.getItem('dropzyy_visitor_id');
         if (!visitorId) {
             visitorId = 'v_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
-            window._visitorId = visitorId; try { sessionStorage.removeItem("dropzyy_visitor_id"); } catch(e){}
+            localStorage.setItem('dropzyy_visitor_id', visitorId);
         }
 
         const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -9781,8 +9601,8 @@ window.fetchDeliverySettingsFromAPI = async function() {
                     min_order_value: parseFloat(data.min_order_value || 50),
                     description: data.description || ''
                 };
-                /* cleaned */
-if (typeof updateCartUI === 'function') updateCartUI();
+                /* zero-storage */
+                if (typeof updateCartUI === 'function') updateCartUI();
             }
         }
     } catch (e) {
@@ -10012,8 +9832,9 @@ window.saveDeliverySettings = async function(event) {
         description: `Configured: ${cType} mode (Threshold: ₹${thresholdVal}, Fee: ₹${feeVal})`
     };
 
-    /* cleaned */
-const status1 = document.getElementById('deliveryConfigSaveStatus');
+    /* zero-storage */
+
+    const status1 = document.getElementById('deliveryConfigSaveStatus');
     const status2 = document.getElementById('modalDeliverySaveStatus');
     const msg = '<span style="color: #059669;"><i class="fa-solid fa-circle-check"></i> Delivery configuration saved successfully!</span>';
     if (status1) status1.innerHTML = msg;
@@ -11055,738 +10876,3 @@ function renderSupplierAnalyticsDashboard() {
 // ============================================================
 //  END SUPPLIER AVAILABILITY CALENDAR
 // ============================================================
-
-// ============================================================
-// 🌟 ZOMATO-THEME: LOCATION DROPDOWN, VEG TOGGLE & VOICE SEARCH
-// ============================================================
-
-window.toggleLocationDropdown = function(event) {
-    if (event) event.stopPropagation();
-    const isMobile = window.innerWidth <= 768;
-    const dDropdown = document.getElementById('headerLocationDropdown');
-    const mDropdown = document.getElementById('mobileLocationDropdown');
-    if (isMobile && mDropdown) {
-        mDropdown.classList.toggle('hidden');
-        if (dDropdown) dDropdown.classList.add('hidden');
-    } else if (dDropdown) {
-        dDropdown.classList.toggle('hidden');
-        if (mDropdown) mDropdown.classList.add('hidden');
-    }
-};
-
-window.renderHeaderLocationSelector = function() {
-    const listContainer = document.getElementById('headerLocationItemsList');
-    const mListContainer = document.getElementById('mobileLocationItemsList');
-    const badge = document.getElementById('adminLocationsCountBadge');
-    const mBadge = document.getElementById('mobileAdminLocationsCountBadge');
-    const dArea = document.getElementById('headerSelectedLocationArea');
-    const dCity = document.getElementById('headerSelectedLocationCity');
-    const mArea = document.getElementById('mobileSelectedLocationArea');
-    const mCity = document.getElementById('mobileSelectedLocationCity');
-
-    const locations = (typeof state !== 'undefined' && Array.isArray(state.serviceableLocations) && state.serviceableLocations.length > 0)
-        ? state.serviceableLocations
-        : DEFAULT_LOCATIONS;
-
-    const countText = `${locations.length} Live`;
-    if (badge) badge.textContent = countText;
-    if (mBadge) mBadge.textContent = countText;
-
-    // Load active selected location from localStorage or default to first
-    let selectedLoc = null;
-    try {
-        selectedLoc = JSON.parse(sessionStorage.getItem("dropzyy_selected_location") || 'null');
-    } catch(e) {}
-
-    if (!selectedLoc || !locations.some(l => String(l.pincode) === String(selectedLoc.pincode))) {
-        selectedLoc = locations[0] || { area: 'Shivaji Nagar', city: 'Pune, India', pincode: '411005' };
-    }
-
-    const areaName = selectedLoc.area || selectedLoc.city || 'Shivaji Nagar';
-    const subText = selectedLoc.pincode ? `Pincode: ${selectedLoc.pincode}` : 'Pune, India';
-
-    if (dArea) dArea.textContent = areaName;
-    if (dCity) dCity.textContent = subText;
-    if (mArea) mArea.textContent = areaName;
-    if (mCity) mCity.textContent = subText;
-
-    const htmlItems = locations.map(loc => {
-        const isSel = String(loc.pincode) === String(selectedLoc.pincode);
-        const aName = loc.area || loc.city;
-        return `
-            <div class="location-item-row ${isSel ? 'selected' : ''}" onclick="selectDeliveryLocation('${loc.pincode}')">
-                <div class="location-item-info">
-                    <i class="fa-solid fa-location-dot ${isSel ? 'text-primary' : 'text-danger'}"></i>
-                    <div class="location-item-text">
-                        <strong>${aName}</strong>
-                        <small>Pincode: ${loc.pincode}</small>
-                    </div>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="location-delivery-tag">⚡ 15-20 Mins</span>
-                    ${isSel ? '<i class="fa-solid fa-circle-check text-primary" style="font-size:0.85rem;"></i>' : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    if (listContainer) listContainer.innerHTML = htmlItems;
-    if (mListContainer) mListContainer.innerHTML = htmlItems;
-};
-
-window.selectDeliveryLocation = function(pincode) {
-    const locations = (typeof state !== 'undefined' && Array.isArray(state.serviceableLocations) && state.serviceableLocations.length > 0)
-        ? state.serviceableLocations
-        : DEFAULT_LOCATIONS;
-
-    const loc = locations.find(l => String(l.pincode) === String(pincode));
-    if (loc) {
-        try {
-            sessionStorage.setItem("dropzyy_selected_location", JSON.stringify(loc));
-        } catch(e) {}
-        window.renderHeaderLocationSelector();
-        const dDropdown = document.getElementById('headerLocationDropdown');
-        const mDropdown = document.getElementById('mobileLocationDropdown');
-        if (dDropdown) dDropdown.classList.add('hidden');
-        if (mDropdown) mDropdown.classList.add('hidden');
-        if (typeof showToast === 'function') {
-            showToast(`📍 Delivery location set to <strong>${loc.area || loc.city} (${loc.pincode})</strong>`, 'success');
-        }
-    }
-};
-
-window.closeAllLocationDropdowns = function() {
-    const dDropdown = document.getElementById('headerLocationDropdown');
-    const mDropdown = document.getElementById('mobileLocationDropdown');
-    if (dDropdown) dDropdown.classList.add('hidden');
-    if (mDropdown) mDropdown.classList.add('hidden');
-};
-
-// Global click/touch away to close location dropdown on BOTH Mobile and Desktop
-function handleOutsideLocationClick(e) {
-    const dSel = document.getElementById('headerLocationSelector');
-    const mSel = document.getElementById('mobileHeaderLocationSelector');
-    const dDropdown = document.getElementById('headerLocationDropdown');
-    const mDropdown = document.getElementById('mobileLocationDropdown');
-
-    const clickedInsideDesktop = (dSel && dSel.contains(e.target)) || (dDropdown && dDropdown.contains(e.target));
-    const clickedInsideMobile  = (mSel && mSel.contains(e.target)) || (mDropdown && mDropdown.contains(e.target));
-
-    if (!clickedInsideDesktop && !clickedInsideMobile) {
-        window.closeAllLocationDropdowns();
-    }
-}
-document.addEventListener('click', handleOutsideLocationClick);
-document.addEventListener('touchend', handleOutsideLocationClick, { passive: true });
-
-// VEG-Only Toggle Filter
-window.toggleVegOnlyFilter = function(checked) {
-    if (typeof state === 'undefined') return;
-    state.vegOnlyFilter = Boolean(checked);
-    const dToggle = document.getElementById('vegOnlyToggle');
-    const mToggle = document.getElementById('mobileVegOnlyToggle');
-    if (dToggle) dToggle.checked = state.vegOnlyFilter;
-    if (mToggle) mToggle.checked = state.vegOnlyFilter;
-    if (typeof showToast === 'function') {
-        showToast(state.vegOnlyFilter ? '🟢 Showing Pure Vegetarian Dishes' : '🍽️ Showing All Menu Dishes', 'info');
-    }
-    if (typeof renderProducts === 'function') renderProducts();
-};
-
-// Quick Filters
-window.toggleNearAndFastFilter = function() {
-    if (typeof state === 'undefined') return;
-    state.quickNearFastFilter = !state.quickNearFastFilter;
-    const btn = document.getElementById('chipNearFast');
-    if (btn) btn.classList.toggle('active-chip', state.quickNearFastFilter);
-    if (typeof renderProducts === 'function') renderProducts();
-};
-
-window.toggleFreeDeliveryFilter = function() {
-    if (typeof state === 'undefined') return;
-    state.quickFreeDelivery = !state.quickFreeDelivery;
-    const btn = document.getElementById('chipFreeDelivery');
-    if (btn) btn.classList.toggle('active-chip', state.quickFreeDelivery);
-    if (typeof showToast === 'function') {
-        showToast('📦 Orders over ₹299 qualify for Free Delivery!', 'info');
-    }
-};
-
-window.filterMealsUnder250 = function() {
-    if (typeof state === 'undefined') return;
-    state.quickMealsUnder250 = !state.quickMealsUnder250;
-    const btn = document.getElementById('chipMealsUnder250');
-    if (btn) btn.classList.toggle('active-chip', state.quickMealsUnder250);
-    if (typeof renderProducts === 'function') renderProducts();
-};
-
-// Voice Search Support
-window.startVoiceSearch = function(inputId) {
-    const input = document.getElementById(inputId);
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        if (typeof showToast === 'function') {
-            showToast('🎙️ Voice search requires microphone access in Chrome/Edge.', 'info');
-        }
-        return;
-    }
-    try {
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'en-IN';
-        recognition.interimResults = false;
-        if (typeof showToast === 'function') {
-            showToast('🎙️ Listening... Speak your food or grocery dish now!', 'info');
-        }
-        recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            if (input) {
-                input.value = transcript;
-                state.searchQuery = transcript;
-                if (typeof renderProducts === 'function') renderProducts();
-            }
-        };
-        recognition.onerror = function() {
-            if (typeof showToast === 'function') {
-                showToast('Could not hear voice. Please try again.', 'error');
-            }
-        };
-        recognition.start();
-    } catch(e) {
-        if (typeof showToast === 'function') {
-            showToast('Microphone access is not permitted in this browser.', 'error');
-        }
-    }
-};
-
-// Initialize location selector once DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', window.renderHeaderLocationSelector);
-} else {
-    setTimeout(window.renderHeaderLocationSelector, 500);
-}
-
-
-
-// ============================================================
-
-// 🎨 ADMIN HOMEPAGE PROMOTIONAL POSTER CAROUSEL (AUTO-SCROLLING & INTERACTIVE)
-// ============================================================
-
-const DEFAULT_BANNER_SLIDES = [
-    {
-        id: 'slide_rangoli',
-        badge: '✨ FESTIVE SPECIAL OFFER • RANGOLI & SWEETS',
-        title: 'Festive Rangoli & Pooja Specials',
-        subtext: 'Rangoli colors, fragrant marigolds, clay diyas, pure ghee sweets & celebratory treats delivered in 15 mins!',
-        btnText: '',
-        showButton: false,
-        status: 'online',
-        active: true,
-        imageUrl: 'uploaded-rangoli.png',
-        filter: 'sweets',
-        gradient: 'linear-gradient(135deg, #701A75 0%, #831843 45%, #C2410C 100%)'
-    },
-    {
-        id: 'slide_pizza',
-        badge: '🍕 HOT PIZZA & SPECIAL OFFERS',
-        title: 'Crispy Pizzas & Combos',
-        subtext: 'Stone-baked crusts, double mozzarella & appetizing sides delivered hot in 15 mins!',
-        btnText: 'Order Pizza & Combos Now',
-        imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=450&q=80',
-        filter: 'pizza',
-        gradient: 'linear-gradient(135deg, #7C2D12 0%, #9A3412 40%, #EA580C 100%)'
-    },
-    {
-        id: 'slide_burger',
-        badge: '🍔 CRAZY BURGER & MEAL DEALS',
-        title: 'Juicy Burgers & Meals',
-        subtext: 'Grilled patties, crispy french fries & chilled beverages delivered straight to your door!',
-        btnText: 'Explore Burgers & Combos',
-        imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=450&q=80',
-        filter: 'burger',
-        gradient: 'linear-gradient(135deg, #831843 0%, #9D174D 40%, #DB2777 100%)'
-    },
-    {
-        id: 'slide_biryani',
-        badge: '🍛 ROYAL DUM BIRYANI FEAST',
-        title: 'Royal Biryani & Curries',
-        subtext: 'Authentic rich spices, aromatic long-grain rice & savory gravy from top verified kitchens!',
-        btnText: 'Order Fresh Biryani Now',
-        imageUrl: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=450&q=80',
-        filter: 'biryani',
-        gradient: 'linear-gradient(135deg, #064E3B 0%, #065F46 40%, #059669 100%)'
-    },
-    {
-        id: 'slide_grocery',
-        badge: '🛒 MANDI FRESH GROCERIES',
-        title: 'Daily Essentials & Sabzi',
-        subtext: 'Fresh chakki atta, fortune oils, fresh vegetables & daily kitchen essentials at wholesale rates!',
-        btnText: 'Shop Daily Essentials',
-        imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=450&q=80',
-        filter: 'grocery',
-        gradient: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 40%, #4338CA 100%)'
-    }
-];
-
-let currentBannerSlideIdx = 0;
-let bannerAutoScrollTimer = null;
-let adminSelectedSlideIndex = 0; // For admin modal editing
-
-window.getBannerSlides = function() {
-    // 1. Prefer live slides loaded from MongoDB Atlas
-    if (window._liveBannerSlides && Array.isArray(window._liveBannerSlides) && window._liveBannerSlides.length > 0) {
-        return window._liveBannerSlides;
-    }
-    return DEFAULT_BANNER_SLIDES;
-};
-
-window.getActiveBannerSlides = function() {
-    const all = window.getBannerSlides();
-    if (!Array.isArray(all) || all.length === 0) return DEFAULT_BANNER_SLIDES;
-    const online = all.filter(s => s.status !== 'offline' && s.active !== false);
-    return online.length > 0 ? online : all;
-};
-
-window.renderBannerSlide = function(idx) {
-    const slides = window.getActiveBannerSlides();
-    if (!slides || slides.length === 0) return;
-
-    if (idx < 0) idx = slides.length - 1;
-    if (idx >= slides.length) idx = 0;
-    currentBannerSlideIdx = idx;
-
-    const slide = slides[currentBannerSlideIdx];
-    const card     = document.getElementById('promoBannerCard');
-    const bText    = document.getElementById('promoBadgeText');
-    const tText    = document.getElementById('promoTitleText');
-    const sText    = document.getElementById('promoSubText');
-    const btnLabel = document.getElementById('promoButtonLabel');
-    const btnAction= document.getElementById('promoActionBtn');
-    const imgElem  = document.getElementById('promoBannerImage');
-    const dotsWrap = document.getElementById('promoDotsIndicator');
-
-    if (bText) bText.textContent = slide.badge || 'SPECIAL OFFER';
-    if (tText) tText.textContent = slide.title || 'Delicious Food Specials';
-    if (sText) sText.textContent = slide.subtext || '';
-    
-    // Optional Button ON / OFF Handling (Strict verification)
-    const showBtn = Boolean(slide.showButton !== false && slide.showButton !== 'false' && slide.showButton !== 0 && slide.btnText && String(slide.btnText).trim().length > 0);
-    if (btnAction) {
-        if (showBtn) {
-            btnAction.style.setProperty('display', 'inline-flex', 'important');
-        } else {
-            btnAction.style.setProperty('display', 'none', 'important');
-        }
-    }
-    if (btnLabel && showBtn) {
-        btnLabel.textContent = slide.btnText;
-    }
-    
-    if (imgElem && slide.imageUrl) imgElem.src = slide.imageUrl;
-    if (card && slide.gradient) card.style.background = slide.gradient;
-
-    // Render interactive pagination dots
-    if (dotsWrap) {
-        dotsWrap.innerHTML = slides.map((_, i) => `
-            <span class="p-dot ${i === currentBannerSlideIdx ? 'active' : ''}" onclick="event.stopPropagation(); goToBannerSlide(${i});" title="Slide ${i + 1}"></span>
-        `).join('');
-    }
-};
-
-window.goToBannerSlide = function(idx) {
-    window.stopBannerAutoScroll();
-    window.renderBannerSlide(idx);
-    window.startBannerAutoScroll();
-};
-
-window.nextBannerSlide = function() {
-    window.goToBannerSlide(currentBannerSlideIdx + 1);
-};
-
-window.prevBannerSlide = function() {
-    window.goToBannerSlide(currentBannerSlideIdx - 1);
-};
-
-window.startBannerAutoScroll = function() {
-    window.stopBannerAutoScroll();
-    bannerAutoScrollTimer = setInterval(() => {
-        const slides = window.getActiveBannerSlides();
-        if (slides && slides.length > 1) {
-            window.renderBannerSlide(currentBannerSlideIdx + 1);
-        }
-    }, 7000); // Relaxed 7 seconds timing so users have plenty of time to view & read posters
-};
-
-window.stopBannerAutoScroll = function() {
-    if (bannerAutoScrollTimer) {
-        clearInterval(bannerAutoScrollTimer);
-        bannerAutoScrollTimer = null;
-    }
-};
-
-// When user clicks anywhere on the banner poster, automatically scroll and filter items!
-window.handleBannerCardClick = function() {
-    const slides = window.getBannerSlides();
-    const activeSlide = slides[currentBannerSlideIdx] || slides[0];
-    const filterKey = (activeSlide && activeSlide.filter) ? activeSlide.filter.trim() : '';
-
-    // Smoothly scroll down to products section
-    const targetSection = document.getElementById('productsSection');
-    if (targetSection) {
-        targetSection.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    if (filterKey) {
-        const sInput = document.getElementById('searchInput');
-        const mInput = document.getElementById('mobileSearchInput');
-        if (sInput) sInput.value = filterKey;
-        if (mInput) mInput.value = filterKey;
-        if (typeof state !== 'undefined') {
-            state.searchQuery = filterKey;
-            // Also reset active category to 'all' so search finds all matching items
-            state.activeCategory = 'all';
-            if (typeof renderCategoryPills === 'function') renderCategoryPills();
-            if (typeof renderProducts === 'function') renderProducts();
-        }
-        if (typeof showToast === 'function') {
-            showToast(`🔍 Showing <strong>${activeSlide.title}</strong> specials!`, 'info');
-        }
-    }
-};
-
-// Pause auto-scroll on mouse hover so users can easily read
-document.addEventListener('DOMContentLoaded', () => {
-    const bannerWrapper = document.getElementById('promoBannerWrapper');
-    if (bannerWrapper) {
-        bannerWrapper.addEventListener('mouseenter', window.stopBannerAutoScroll);
-        bannerWrapper.addEventListener('mouseleave', window.startBannerAutoScroll);
-    }
-});
-
-// ------------------------------------------------------------
-// ADMIN POSTER MODAL LOGIC (FIXED ACTIVE CLASSES & MULTI-SLIDE)
-// ------------------------------------------------------------
-
-window.openAdminPosterModal = function() {
-    if (!state.currentUser || (state.currentUser.role !== 'admin' && state.currentUser.role !== 'sub_admin')) {
-        if (typeof showToast === 'function') showToast('Access restricted to Administrators', 'info');
-        return;
-    }
-    
-    // Close other open modals
-    if (typeof closeModals === 'function') closeModals();
-
-    const modal = document.getElementById('adminPosterModal');
-    const overlay = document.getElementById('adminPosterOverlay');
-    if (overlay) overlay.classList.add('active');
-    if (modal) modal.classList.add('active');
-
-    adminSelectedSlideIndex = 0;
-    renderAdminPosterTabs();
-    populateAdminPosterForm(0);
-};
-
-window.closeAdminPosterModal = function() {
-    const modal = document.getElementById('adminPosterModal');
-    const overlay = document.getElementById('adminPosterOverlay');
-    if (modal) modal.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
-};
-
-window.togglePosterOnlineStatus = function(checked) {
-    const badge = document.getElementById('posterStatusTextBadge');
-    if (badge) {
-        badge.textContent = checked ? 'ONLINE' : 'OFFLINE';
-        badge.style.background = checked ? '#ECFDF5' : '#F1F5F9';
-        badge.style.color = checked ? '#065F46' : '#64748B';
-    }
-};
-
-window.togglePosterButtonInput = function(checked) {
-    const btnInput = document.getElementById('posterButtonTextInput');
-    const badge = document.getElementById('posterButtonStateBadge');
-    if (btnInput) {
-        btnInput.disabled = !checked;
-        btnInput.style.opacity = checked ? '1' : '0.5';
-        if (!checked) {
-            btnInput.placeholder = 'Button disabled (clean image banner mode)';
-        } else {
-            btnInput.placeholder = 'e.g. Order Now, Explore Deals';
-        }
-    }
-    if (badge) {
-        badge.textContent = checked ? 'ON' : 'OFF';
-        badge.style.background = checked ? '#EFF6FF' : '#F1F5F9';
-        badge.style.color = checked ? '#1D4ED8' : '#64748B';
-    }
-    window.updatePosterLivePreview();
-};
-
-function renderAdminPosterTabs() {
-    const container = document.getElementById('adminPosterSlideTabs');
-    if (!container) return;
-
-    const slides = window.getBannerSlides();
-    let tabsHtml = slides.map((s, i) => {
-        const isOnline = s.status !== 'offline' && s.active !== false;
-        const statusBadge = isOnline 
-            ? `<span style="background: #ECFDF5; color: #065F46; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; margin-left: 4px;">LIVE</span>`
-            : `<span style="background: #F1F5F9; color: #64748B; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; margin-left: 4px;">OFFLINE</span>`;
-        return `
-            <button type="button" class="btn-slide-tab ${i === adminSelectedSlideIndex ? 'active' : ''}" onclick="selectAdminSlideTab(${i})" style="display: inline-flex; align-items: center;">
-                <span>Slide ${i + 1}: ${(s.title || 'Untitled').substring(0, 14)}...</span>
-                ${statusBadge}
-            </button>
-        `;
-    }).join('');
-
-    tabsHtml += `
-        <button type="button" class="btn-slide-tab add-new" onclick="selectAdminNewSlideTab()">
-            <i class="fa-solid fa-plus"></i> Add New Slide
-        </button>
-    `;
-    container.innerHTML = tabsHtml;
-
-    const delBtn = document.getElementById('adminDeleteSlideBtn');
-    if (delBtn) {
-        delBtn.style.display = (slides.length > 1 && adminSelectedSlideIndex < slides.length) ? 'inline-flex' : 'none';
-    }
-}
-
-window.selectAdminSlideTab = function(idx) {
-    adminSelectedSlideIndex = idx;
-    renderAdminPosterTabs();
-    populateAdminPosterForm(idx);
-};
-
-window.selectAdminNewSlideTab = function() {
-    const slides = window.getBannerSlides();
-    adminSelectedSlideIndex = slides.length; // New slide position
-    renderAdminPosterTabs();
-    
-    // Clear form for new entry
-    document.getElementById('posterBadgeInput').value = '🔥 NEW SPECIAL OFFER';
-    document.getElementById('posterButtonTextInput').value = 'Explore Deals Now';
-    document.getElementById('posterTitleInput').value = '';
-    document.getElementById('posterSubtextInput').value = '';
-    document.getElementById('posterFilterKeyword').value = '';
-    document.getElementById('posterImageUrlInput').value = '';
-    window._tempPosterUploadedImage = (slide.imageUrl && slide.imageUrl.startsWith("data:image")) ? slide.imageUrl : null;
-
-    document.getElementById('adminPosterPreviewTitle').textContent = 'New Poster Headline';
-    document.getElementById('adminPosterPreviewBadge').textContent = '🔥 NEW SPECIAL OFFER';
-    document.getElementById('adminPosterPreviewImg').src = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80';
-};
-
-function populateAdminPosterForm(idx) {
-    const slides = window.getBannerSlides();
-    const slide = slides[idx] || slides[0];
-    if (!slide) return;
-
-    const badgeInput = document.getElementById('posterBadgeInput');
-    const btnInput   = document.getElementById('posterButtonTextInput');
-    const titleInput = document.getElementById('posterTitleInput');
-    const subInput   = document.getElementById('posterSubtextInput');
-    const keyInput   = document.getElementById('posterFilterKeyword');
-    const urlInput   = document.getElementById('posterImageUrlInput');
-    const prevImg    = document.getElementById('adminPosterPreviewImg');
-    const prevTitle  = document.getElementById('adminPosterPreviewTitle');
-    const prevBadge  = document.getElementById('adminPosterPreviewBadge');
-
-    if (badgeInput) badgeInput.value = slide.badge || '';
-    if (btnInput)   btnInput.value = slide.btnText || '';
-    if (titleInput) titleInput.value = slide.title || '';
-    if (subInput)   subInput.value = slide.subtext || '';
-    if (keyInput)   keyInput.value = slide.filter || '';
-    if (urlInput)   urlInput.value = (slide.imageUrl && !slide.imageUrl.startsWith('data:image')) ? slide.imageUrl : '';
-    if (prevImg && slide.imageUrl) prevImg.src = slide.imageUrl;
-    if (prevTitle)  prevTitle.textContent = slide.title || 'Poster Headline';
-    if (prevBadge)  prevBadge.textContent = slide.badge || 'BADGE';
-    window._tempPosterUploadedImage = (slide.imageUrl && slide.imageUrl.startsWith("data:image")) ? slide.imageUrl : null;
-
-    // Online / Offline Status
-    const onlineToggle = document.getElementById('posterStatusOnlineToggle');
-    const isOnline = slide.status !== 'offline' && slide.active !== false;
-    if (onlineToggle) onlineToggle.checked = isOnline;
-    window.togglePosterOnlineStatus(isOnline);
-
-    // Action Button ON / OFF
-    const btnToggle = document.getElementById('posterShowButtonToggle');
-    const hasBtn = slide.showButton !== false && Boolean(slide.btnText && slide.btnText.trim());
-    if (btnToggle) btnToggle.checked = hasBtn;
-    window.togglePosterButtonInput(hasBtn);
-
-    window.updatePosterLivePreview();
-}
-
-window.handlePosterFileUpload = function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-        if (typeof showToast === 'function') showToast('Please select a valid image file (JPEG, PNG, WebP)', 'error');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        const base64Url = evt.target.result;
-        const prevImg = document.getElementById('adminPosterPreviewImg');
-        const urlInput = document.getElementById('posterImageUrlInput');
-        if (prevImg) prevImg.src = base64Url;
-        if (urlInput) urlInput.value = '';
-        window._tempPosterUploadedImage = base64Url;
-        if (typeof showToast === 'function') showToast('✅ Poster image uploaded! Click Save to publish.', 'success');
-    };
-    reader.readAsDataURL(file);
-};
-
-window.updatePosterLivePreview = function() {
-    const urlInput = document.getElementById('posterImageUrlInput');
-    const prevImg  = document.getElementById('adminPosterPreviewImg');
-    const titleInput = document.getElementById('posterTitleInput');
-    const badgeInput = document.getElementById('posterBadgeInput');
-    const prevTitle = document.getElementById('adminPosterPreviewTitle');
-    const prevBadge = document.getElementById('adminPosterPreviewBadge');
-    const btnWrap = document.getElementById('adminPosterPreviewBtnWrap');
-    const btnText = document.getElementById('adminPosterPreviewBtnText');
-    const showBtnToggle = document.getElementById('posterShowButtonToggle');
-    const btnInput = document.getElementById('posterButtonTextInput');
-
-    if (urlInput && prevImg && urlInput.value.trim()) {
-        prevImg.src = urlInput.value.trim();
-        window._tempPosterUploadedImage = (slide.imageUrl && slide.imageUrl.startsWith("data:image")) ? slide.imageUrl : null;
-    }
-    if (titleInput && prevTitle) prevTitle.textContent = titleInput.value || 'Poster Headline';
-    if (badgeInput && prevBadge) prevBadge.textContent = badgeInput.value || 'BADGE';
-
-    const showBtn = showBtnToggle ? showBtnToggle.checked : true;
-    const bVal = btnInput ? btnInput.value.trim() : '';
-    if (btnWrap) {
-        btnWrap.style.display = (showBtn && bVal) ? 'block' : 'none';
-    }
-    if (btnText) {
-        btnText.textContent = bVal || 'Order Now';
-    }
-};
-
-window.handleSavePosterBanner = function(e) {
-    e.preventDefault();
-    const badge = document.getElementById('posterBadgeInput').value.trim();
-    const btnText = document.getElementById('posterButtonTextInput').value.trim();
-    const title = document.getElementById('posterTitleInput').value.trim();
-    const subtext = document.getElementById('posterSubtextInput').value.trim();
-    const filterKey = document.getElementById('posterFilterKeyword').value.trim().toLowerCase();
-    const urlInput = document.getElementById('posterImageUrlInput').value.trim();
-
-    let finalImg = window._tempPosterUploadedImage || urlInput;
-    if (!finalImg) {
-        finalImg = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=450&q=80';
-    }
-
-    const onlineToggle = document.getElementById('posterStatusOnlineToggle');
-    const isOnline = onlineToggle ? onlineToggle.checked : true;
-    const btnToggle = document.getElementById('posterShowButtonToggle');
-    const showBtn = btnToggle ? btnToggle.checked : true;
-
-    const slides = window.getBannerSlides();
-    const updatedSlide = {
-        id: (adminSelectedSlideIndex < slides.length && slides[adminSelectedSlideIndex]) ? slides[adminSelectedSlideIndex].id : `slide_${Date.now()}`,
-        badge: badge,
-        btnText: showBtn ? btnText : '',
-        showButton: showBtn,
-        status: isOnline ? 'online' : 'offline',
-        active: isOnline,
-        title: title,
-        subtext: subtext,
-        filter: filterKey,
-        imageUrl: finalImg,
-        gradient: (adminSelectedSlideIndex < slides.length && slides[adminSelectedSlideIndex].gradient) ? slides[adminSelectedSlideIndex].gradient : 'linear-gradient(135deg, #7C2D12 0%, #9A3412 40%, #EA580C 100%)'
-    };
-
-    if (adminSelectedSlideIndex < slides.length) {
-        slides[adminSelectedSlideIndex] = updatedSlide;
-    } else {
-        slides.push(updatedSlide);
-    }
-
-    try {
-        /* cleaned */
-// Save directly to MongoDB Atlas dedicated banner_posters collection
-        window._liveBannerSlides = slides;
-        const bannerApi = (typeof API_BASE_URL !== 'undefined') ? `${API_BASE_URL}/banners` : '/api/banners';
-        fetch(bannerApi, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(slides)
-        }).then(r => r.json()).then(res => {
-            console.log('[BANNERS] Successfully synchronized to MongoDB Atlas collection banner_posters:', res);
-        }).catch(err => {
-            console.warn('[BANNERS] MongoDB sync error:', err);
-        });
-    } catch(err) {}
-
-    window.renderBannerSlide(adminSelectedSlideIndex < slides.length ? adminSelectedSlideIndex : 0);
-    window.startBannerAutoScroll();
-    window.closeAdminPosterModal();
-
-    if (typeof showToast === 'function') {
-        showToast('🎉 <strong>Poster Published!</strong> Your banner slide is now active and rotating.', 'success');
-    }
-};
-
-window.deleteCurrentBannerSlide = function() {
-    const slides = window.getBannerSlides();
-    if (slides.length <= 1) {
-        if (typeof showToast === 'function') showToast('Cannot delete the last remaining slide.', 'info');
-        return;
-    }
-
-    if (confirm(`Are you sure you want to delete slide ${adminSelectedSlideIndex + 1}?`)) {
-        slides.splice(adminSelectedSlideIndex, 1);
-        try {
-            /* cleaned */
-window._liveBannerSlides = slides;
-        const bannerApi = (typeof API_BASE_URL !== 'undefined') ? `${API_BASE_URL}/banners` : '/api/banners';
-        fetch(bannerApi, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(slides)
-            }).catch(() => {});
-        } catch(err) {}
-        adminSelectedSlideIndex = 0;
-        window.renderBannerSlide(0);
-        window.startBannerAutoScroll();
-        window.closeAdminPosterModal();
-        if (typeof showToast === 'function') {
-            showToast('Slide deleted successfully.', 'info');
-        }
-    }
-};
-
-window.resetAllBannerSlidesToDefault = function() {
-    try {
-        localStorage.removeItem('dropzyy_banner_slides');
-        localStorage.removeItem('dropzyy_banner_poster');
-    } catch(e) {}
-    window._tempPosterUploadedImage = (slide.imageUrl && slide.imageUrl.startsWith("data:image")) ? slide.imageUrl : null;
-    window.renderBannerSlide(0);
-    window.startBannerAutoScroll();
-    window.closeAdminPosterModal();
-    if (typeof showToast === 'function') {
-        showToast('All banner slides reset to default rotating advertisements.', 'info');
-    }
-};
-
-// Initialize and start auto-scrolling on load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.renderBannerSlide(0);
-        window.startBannerAutoScroll();
-    });
-} else {
-    setTimeout(() => {
-        window.renderBannerSlide(0);
-        window.startBannerAutoScroll();
-    }, 400);
-}

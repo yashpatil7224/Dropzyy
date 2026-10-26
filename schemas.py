@@ -59,6 +59,21 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class AdminUserUpdate(BaseModel):
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None # 'customer', 'supplier', 'admin'
+    phone: Optional[str] = None
+    supplier_company_name: Optional[str] = None
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    banner_image: Optional[str] = None
+    menu_card_image: Optional[str] = None
+    store_open: Optional[bool] = None
+    open_time: Optional[str] = None
+    close_time: Optional[str] = None
+
 class SupplierStoreImagesUpdate(BaseModel):
     user_id: Optional[int] = None
     username: Optional[str] = None
