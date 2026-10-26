@@ -3,9 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Dropzyy - Instant Delivery for Food, Groceries & Essentials</title>
     <meta name="description" content="Shop daily staples, hotel food, fresh sabzi, fruits, Aashirvaad Atta, Fortune Oil, Amul Butter, Dals, and snacks delivered to your home with Dropzyy Delivery.">
     <!-- Google Fonts -->
@@ -17,7 +14,7 @@
     <!-- Chart.js Library for Data Analytics Graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=5.0">
+    <link rel="stylesheet" href="style.css?v=4.0">
     <!-- EmailJS SDK & Configuration -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
@@ -46,18 +43,57 @@
     <!-- Main Header -->
     <header class="main-header" id="mainHeader">
         <div class="container header-inner">
-            <div class="header-left-wrapper" style="display: flex; align-items: center; gap: 20px; flex: 1; max-width: 800px;">
+            <div class="header-left-wrapper" style="display: flex; align-items: center; gap: 16px; flex: 1;">
                 <!-- Brand Logo -->
                 <a href="#" class="brand-logo" style="display: flex; align-items: center; text-decoration: none; flex-shrink: 0;">
-                    <img src="dropzyy-logo.png" alt="dropzyy" class="brand-logo-img" style="height: 68px; width: auto; object-fit: contain;">
+                    <img src="dropzyy-logo.png" alt="dropzyy" class="brand-logo-img" style="height: 58px; width: auto; object-fit: contain;">
                 </a>
 
-                <!-- Search Bar (Positioned Right Beside Logo) -->
-                <div class="search-box" style="position: relative; flex: 1;">
-                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" id="searchInput" placeholder="Search Biryani, Pizza, Milk, Atta, Cold Drinks, Snacks, Sabzi..." autocomplete="off">
-                    <button class="clear-search-btn hidden" id="clearSearchBtn"><i class="fa-solid fa-xmark"></i></button>
-                    <div class="search-suggestions hidden" id="searchSuggestions"></div>
+                <!-- Admin-Configured Delivery Location Dropdown Selector -->
+                <div class="header-location-selector" id="headerLocationSelector" onclick="toggleLocationDropdown(event)" title="Choose Delivery Location (Admin Configured)">
+                    <i class="fa-solid fa-location-dot location-pin-icon text-danger"></i>
+                    <div class="location-label-group">
+                        <div class="location-title">
+                            <span id="headerSelectedLocationArea">Shivaji Nagar</span>
+                            <i class="fa-solid fa-chevron-down location-caret"></i>
+                        </div>
+                        <div class="location-sub" id="headerSelectedLocationCity">Pune, India</div>
+                    </div>
+
+                    <!-- Dropdown Menu displaying Admin-Added Locations -->
+                    <div class="header-location-dropdown-menu hidden" id="headerLocationDropdown">
+                        <div class="location-dropdown-header">
+                            <div>
+                                <strong>Select Delivery Area</strong>
+                                <small style="display: block; font-size: 0.72rem; color: #64748B;">Admin-verified serviceable areas</small>
+                            </div>
+                            <span class="badge" style="background:#ECFDF5; color:#065F46; font-size:0.7rem; font-weight:700;" id="adminLocationsCountBadge">Live</span>
+                        </div>
+                        <div class="location-items-list" id="headerLocationItemsList">
+                            <!-- Populated dynamically by renderHeaderLocationSelector() -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Bar Container with Mic & VEG Toggle Switch -->
+                <div class="search-box-row" style="display: flex; align-items: center; gap: 10px; flex: 1; max-width: 540px;">
+                    <div class="search-box" style="position: relative; flex: 1;">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="searchInput" placeholder='Search "comfort food", groceries, biryani, milk...' autocomplete="off">
+                        <button class="clear-search-btn hidden" id="clearSearchBtn"><i class="fa-solid fa-xmark"></i></button>
+                        <div class="search-suggestions hidden" id="searchSuggestions"></div>
+                    </div>
+
+
+
+                    <!-- Pure VEG Switch Toggle -->
+                    <div class="veg-toggle-chip" title="Toggle Pure Vegetarian Items Only">
+                        <span class="veg-chip-text">VEG</span>
+                        <label class="switch-veg">
+                            <input type="checkbox" id="vegOnlyToggle" onchange="toggleVegOnlyFilter(this.checked)">
+                            <span class="slider-veg"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -105,53 +141,152 @@
                 </button>
             </div>
         </div>
+    </header>
 
-        <!-- Dedicated Admin & Supplier Toolbar (Positioned Below Search Bar Header) -->
-        <div class="admin-toolbar-bar hidden" id="adminToolbarRow">
-            <div class="container admin-toolbar-inner">
-                <span class="admin-toolbar-label"><i class="fa-solid fa-user-shield text-primary"></i> Management Tools:</span>
-                <div class="admin-toolbar-actions">
-                    <button class="action-btn admin-control-btn hidden" id="adminControlCenterBtn" title="Administrative Control Center">
-                        <i class="fa-solid fa-sliders text-primary"></i>
-                        <span>Admin Panel</span>
-                    </button>
+    <!-- Mobile Top Header & Search Bar (With Dropzyy Logo, Location & Login/Register Button) -->
+    <div class="mobile-search-wrapper mobile-only">
+        <div class="container">
+            <!-- Mobile Brand Logo, Location & Login/Register Button Top Row -->
+            <div class="mobile-top-header-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px;">
+                <!-- Brand Logo (Dropzyy) -->
+                <a href="#" class="brand-logo" style="display: flex; align-items: center; text-decoration: none; flex-shrink: 0;">
+                    <img src="dropzyy-logo.png" alt="dropzyy" class="brand-logo-img" style="height: 38px; width: auto; object-fit: contain;">
+                </a>
 
-                    <button class="action-btn supplier-dashboard-btn hidden" id="supplierDashboardBtn" title="Supplier Dashboard">
-                        <i class="fa-solid fa-boxes-packing text-primary"></i>
-                        <span>My Products</span>
-                    </button>
+                <!-- Location Selector -->
+                <div class="header-location-selector mobile-loc-selector" id="mobileHeaderLocationSelector" onclick="toggleLocationDropdown(event)" title="Change Location" style="flex: 1; min-width: 0; padding: 4px 8px;">
+                    <i class="fa-solid fa-location-dot location-pin-icon text-danger" style="font-size: 1.1rem;"></i>
+                    <div class="location-label-group" style="min-width: 0;">
+                        <div class="location-title" style="font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <span id="mobileSelectedLocationArea">Savda</span>
+                            <i class="fa-solid fa-chevron-down location-caret" style="color: #64748B; font-size: 0.6rem;"></i>
+                        </div>
+                        <div class="location-sub" id="mobileSelectedLocationCity" style="color: #64748B; font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Pincode: 425502</div>
+                    </div>
 
-                    <button class="action-btn track-bookings-btn hidden" id="trackBookingsBtn" title="Booking Tracking Platform">
-                        <i class="fa-solid fa-map-location-dot text-primary"></i>
-                        <span>Track Bookings</span>
-                    </button>
+                    <!-- Mobile Dropdown Menu displaying Admin Locations -->
+                    <div class="header-location-dropdown-menu hidden" id="mobileLocationDropdown">
+                        <div class="location-dropdown-header">
+                            <div>
+                                <strong>Select Delivery Area</strong>
+                                <small style="display: block; font-size: 0.72rem; color: #64748B;">Admin-configured locations</small>
+                            </div>
+                            <span class="badge" style="background:#ECFDF5; color:#065F46; font-size:0.7rem; font-weight:700;" id="mobileAdminLocationsCountBadge">Live</span>
+                        </div>
+                        <div class="location-items-list" id="mobileLocationItemsList">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
 
-                    <button class="action-btn admin-analytics-btn hidden" id="adminAnalyticsBtn" onclick="openDataAnalyticsModal()" title="Full-Screen Executive Data Analytics">
-                        <i class="fa-solid fa-chart-line text-primary"></i>
-                        <span>Data Analytics 📊</span>
-                    </button>
-
-                    <button class="action-btn admin-category-btn hidden" id="adminCategoryBtn" onclick="openAdminCategoriesModal()" title="Add & Manage Categories">
-                        <i class="fa-solid fa-folder-plus text-primary"></i>
-                        <span>+ Add Category</span>
-                    </button>
-
-                    <button class="action-btn admin-portal-btn hidden" id="adminPortalBtn" title="Add Kirana Item">
-                        <i class="fa-solid fa-plus-circle text-primary"></i>
-                        <span>+ Add Item</span>
+                <!-- Login / Register Button (Same as Desktop View) -->
+                <div class="user-auth-wrapper mobile-auth-wrapper" id="mobileUserAuthWrapper" style="flex-shrink: 0;">
+                    <button class="action-btn login-trigger-btn" id="mobileOpenAuthBtn" onclick="openAuthModal()" title="Login / Register" style="padding: 6px 10px; font-size: 0.75rem; font-weight: 700; background: #10B981; color: #FFF; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(16,185,129,0.3); white-space: nowrap;">
+                        <i class="fa-regular fa-user"></i>
+                        <span class="auth-btn-text">Login / Register</span>
                     </button>
                 </div>
             </div>
-        </div>
-    </header>
 
-    <!-- Mobile Search Bar -->
-    <div class="mobile-search-wrapper mobile-only">
+            <!-- Mobile Search + VEG Toggle Row (No Mic, Clean Legible UI) -->
+            <div class="mobile-search-controls-row">
+                <div class="search-box mobile-search-box" style="position: relative; flex: 1;">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="mobileSearchInput" placeholder='Search Pizza, Biryani, Atta, Groceries, Snacks...' autocomplete="off">
+                    <div class="search-suggestions hidden" id="mobileSearchSuggestions"></div>
+                </div>
+
+                <div class="veg-toggle-chip mobile-veg-chip" title="Toggle Pure Vegetarian Items Only">
+                    <span class="veg-chip-text">VEG</span>
+                    <label class="switch-veg">
+                        <input type="checkbox" id="mobileVegOnlyToggle" onchange="toggleVegOnlyFilter(this.checked)">
+                        <span class="slider-veg"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dedicated Admin & Supplier Toolbar (Visible Below Header & Mobile Search Bar for Admins/Suppliers) -->
+    <div class="admin-toolbar-bar hidden" id="adminToolbarRow">
+        <div class="container admin-toolbar-inner">
+            <span class="admin-toolbar-label"><i class="fa-solid fa-user-shield text-primary"></i> Admin Tools:</span>
+            <div class="admin-toolbar-actions">
+                <button class="action-btn admin-control-btn hidden" id="adminControlCenterBtn" onclick="openAdminControlCenter()" title="Administrative Control Center">
+                    <i class="fa-solid fa-sliders text-primary"></i>
+                    <span>Admin Panel</span>
+                </button>
+
+                <button class="action-btn supplier-dashboard-btn hidden" id="supplierDashboardBtn" title="Supplier Dashboard">
+                    <i class="fa-solid fa-boxes-packing text-primary"></i>
+                    <span>My Products</span>
+                </button>
+
+                <button class="action-btn track-bookings-btn hidden" id="trackBookingsBtn" onclick="openBookingTrackingModal()" title="Booking Tracking Platform">
+                    <i class="fa-solid fa-map-location-dot text-primary"></i>
+                    <span>Track Bookings</span>
+                </button>
+
+                <button class="action-btn admin-analytics-btn hidden" id="adminAnalyticsBtn" onclick="openDataAnalyticsModal()" title="Full-Screen Executive Data Analytics">
+                    <i class="fa-solid fa-chart-line text-primary"></i>
+                    <span>Data Analytics 📊</span>
+                </button>
+
+                <button class="action-btn admin-portal-btn hidden" id="adminPortalBtn" onclick="openAddProductModal()" title="Add Product Item">
+                    <i class="fa-solid fa-plus-circle text-primary"></i>
+                    <span>+ Add Item</span>
+                </button>
+
+                <button class="action-btn admin-category-btn hidden" id="adminCategoryBtn" onclick="openAdminCategoriesModal()" title="Add & Manage Categories">
+                    <i class="fa-solid fa-folder-plus text-primary"></i>
+                    <span>+ Add Category</span>
+                </button>
+
+                <button class="action-btn admin-poster-btn hidden" id="adminToolbarPosterBtn" onclick="openAdminPosterModal()" title="Manage Hero Promotional Posters">
+                    <i class="fa-solid fa-image text-primary"></i>
+                    <span>Manage Posters</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Categories Quick Navigation Strip (Immediate high visibility for mobile shoppers) -->
+    <div class="mobile-categories-strip-wrapper mobile-only">
         <div class="container">
-            <div class="search-box mobile-search-box" style="position: relative;">
-                <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input type="text" id="mobileSearchInput" placeholder="Search Biryani, Pizza, Milk, Atta, Cold Drinks, Snacks, Sabzi..." autocomplete="off">
-                <div class="search-suggestions hidden" id="mobileSearchSuggestions"></div>
+            <div class="mobile-categories-strip" id="mobileCategoriesStrip">
+                <!-- Populated dynamically by renderCategories() -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotional Hero Banner Carousel (Auto-Scrolling, Clickable & Admin Managed) -->
+    <div class="promo-banner-wrapper container" id="promoBannerWrapper">
+        <div class="promo-banner-card" id="promoBannerCard" onclick="handleBannerCardClick()" title="Click to view & order this special offer">
+            <!-- Left Slider Arrow -->
+            <button class="promo-slider-arrow prev" onclick="event.stopPropagation(); prevBannerSlide();" title="Previous Slide">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <div class="promo-card-content">
+                <span class="promo-card-badge" id="promoBadgeText" style="background: #FEF08A; color: #854D0E;">✨ FESTIVE SPECIAL OFFER • RANGOLI & SWEETS</span>
+                <h2 class="promo-card-title" id="promoTitleText">Festive Rangoli & Pooja Specials</h2>
+                <p class="promo-card-sub" id="promoSubText">Rangoli colors, fragrant marigolds, clay diyas, pure ghee sweets & celebratory treats delivered in 15 mins!</p>
+                <div class="promo-explore-btn" id="promoActionBtn" style="display: none;">
+                    <span id="promoButtonLabel">Shop Rangoli & Festive Specials</span> <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem;"></i>
+                </div>
+            </div>
+            <div class="promo-card-media">
+                <img src="rangoli-banner.jpg" alt="Festive Rangoli Specials" class="promo-banner-img" id="promoBannerImage">
+            </div>
+
+            <!-- Right Slider Arrow -->
+            <button class="promo-slider-arrow next" onclick="event.stopPropagation(); nextBannerSlide();" title="Next Slide">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+
+            <!-- Interactive Pagination Indicator Dots -->
+            <div class="promo-dots-indicator" id="promoDotsIndicator">
+                <!-- Rendered dynamically -->
             </div>
         </div>
     </div>
@@ -221,6 +356,22 @@
             </div>
         </div>
     </section>
+
+    <!-- Quick Filters Chips Bar (Near & Fast, Free Delivery, Filters) -->
+    <div class="quick-filters-strip container">
+        <button class="quick-chip-btn active" onclick="document.getElementById('productsSection').scrollIntoView({behavior:'smooth'})">
+            <i class="fa-solid fa-sliders"></i> Filters <i class="fa-solid fa-chevron-down" style="font-size:0.65rem;"></i>
+        </button>
+        <button class="quick-chip-btn" id="chipNearFast" onclick="toggleNearAndFastFilter()">
+            <i class="fa-solid fa-bolt text-warning"></i> Near & Fast
+        </button>
+        <button class="quick-chip-btn" id="chipFreeDelivery" onclick="toggleFreeDeliveryFilter()">
+            <i class="fa-solid fa-box-open text-primary"></i> No packaging charges
+        </button>
+        <button class="quick-chip-btn" id="chipMealsUnder250" onclick="filterMealsUnder250()">
+            <i class="fa-solid fa-tag text-danger"></i> Meals Under ₹250
+        </button>
+    </div>
 
     <!-- Partner Restaurants & Stores Section -->
     <section class="restaurants-section" id="restaurantsSection" style="padding: 36px 0; background: #F8FAFC; border-top: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;">
@@ -664,6 +815,9 @@
                 </button>
                 <button type="button" class="btn btn-secondary btn-sm" id="adminManageBlockedBtn" onclick="openAdminBlockedModal()" style="border-color: #FECACA; background: #FEF2F2; color: #DC2626; font-weight: 700;">
                     <i class="fa-solid fa-user-slash text-danger"></i> Blocklist Shield 🚫
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="adminManagePosterBtn" onclick="openAdminPosterModal()" style="border-color: #F59E0B; background: #FEF3C7; color: #92400E; font-weight: 700;">
+                    <i class="fa-solid fa-image text-warning"></i> Banner Poster 🎨
                 </button>
                 <button type="button" class="btn btn-primary btn-sm" id="adminCreateAccountBtn">
                     <i class="fa-solid fa-user-plus"></i> Create Account
@@ -2374,6 +2528,18 @@
             <i class="fa-solid fa-map-location-dot"></i>
             <span>Track Order</span>
         </button>
+        <button class="mobile-nav-item hidden" id="mobileAdminNavBtn" onclick="openAdminControlCenter()" title="Admin Control Center">
+            <i class="fa-solid fa-user-shield text-primary"></i>
+            <span>Admin</span>
+        </button>
+        <button class="mobile-nav-item hidden" id="mobileAnalyticsNavBtn" onclick="openDataAnalyticsModal()" title="Data Analytics">
+            <i class="fa-solid fa-chart-line text-primary"></i>
+            <span>Analytics</span>
+        </button>
+        <button class="mobile-nav-item hidden" id="mobileAddItemNavBtn" onclick="openAddProductModal()" title="Add New Item">
+            <i class="fa-solid fa-plus-circle text-primary"></i>
+            <span>Add Item</span>
+        </button>
         <button class="mobile-nav-item mobile-cart-trigger" id="mobileCartBtn">
             <div class="nav-cart-badge-wrapper">
                 <i class="fa-solid fa-basket-shopping"></i>
@@ -2553,8 +2719,127 @@
     <!-- EmailJS SDK Integration -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <!-- Menu Card Data (Embedded Base64 for 100% Reliable Offline & File Protocol Display) -->
-    <script src="menu_card_data.js?v=5.0"></script>
+    <script src="menu_card_data.js"></script>
     <!-- JavaScript -->
-    <script src="app.js?v=8.0"></script>
+    <script src="app.js?v=4.0"></script>
+        <!-- Admin Banner Poster Management Modal (Upload & Control Homepage Poster Slides) -->
+    <div class="modal-overlay" id="adminPosterOverlay" onclick="closeAdminPosterModal()"></div>
+    <div class="admin-modal" id="adminPosterModal" style="max-width: 720px; width: 92%; max-height: 90vh; overflow-y: auto;">
+        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openAdminControlCenter()">
+                <i class="fa-solid fa-arrow-left"></i> Back to Admin Panel
+            </button>
+            <button type="button" class="close-modal-btn" onclick="closeAdminPosterModal()" title="Close" style="position: static;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-image text-warning"></i> Homepage Promotional Poster & Slides Manager</h2>
+            <p>Add, upload, or edit scrolling advertisement posters. Click on any slide below to modify it.</p>
+        </div>
+
+        <!-- Slide Selector Tabs -->
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight: 700; font-size: 0.82rem; color: #475569; display: block; margin-bottom: 6px;">Select Slide to Edit or Add New:</label>
+            <div id="adminPosterSlideTabs" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <!-- Populated dynamically by renderAdminPosterTabs() -->
+            </div>
+        </div>
+
+        <form class="admin-form" id="adminPosterForm" onsubmit="handleSavePosterBanner(event)" style="background: var(--bg-secondary); padding: 18px; border-radius: var(--radius-md);">
+            <!-- Online/Offline Status & Action Button Controls -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 14px;">
+                <!-- Online / Offline Toggle -->
+                <div style="background: #FFFFFF; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #0F172A; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-power-off text-primary"></i> Poster Status:
+                            <span id="posterStatusTextBadge" class="badge" style="background: #ECFDF5; color: #065F46; font-weight: 800; font-size: 0.76rem; padding: 2px 8px; border-radius: 6px;">ONLINE</span>
+                        </div>
+                        <small style="color: #64748B; font-size: 0.72rem; display: block; margin-top: 2px;">Offline posters are hidden from users on the app</small>
+                    </div>
+                    <label class="switch-veg" style="margin: 0; flex-shrink: 0;" title="Toggle Online / Offline Status">
+                        <input type="checkbox" id="posterStatusOnlineToggle" onchange="togglePosterOnlineStatus(this.checked)" checked>
+                        <span class="slider-veg"></span>
+                    </label>
+                </div>
+
+                <!-- Action Button ON / OFF Toggle -->
+                <div style="background: #FFFFFF; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.88rem; color: #0F172A; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-hand-pointer text-primary"></i> Action Button:
+                            <span id="posterButtonStateBadge" class="badge" style="background: #EFF6FF; color: #1D4ED8; font-weight: 800; font-size: 0.76rem; padding: 2px 8px; border-radius: 6px;">ON</span>
+                        </div>
+                        <small style="color: #64748B; font-size: 0.72rem; display: block; margin-top: 2px;">Turn OFF if you prefer a clean image banner without button</small>
+                    </div>
+                    <label class="switch-veg" style="margin: 0; flex-shrink: 0;" title="Enable or Disable Button on Poster">
+                        <input type="checkbox" id="posterShowButtonToggle" onchange="togglePosterButtonInput(this.checked)" checked>
+                        <span class="slider-veg"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="posterBadgeInput">Badge Tag (e.g. 🍕 HOT PIZZA DEALS)</label>
+                    <input type="text" id="posterBadgeInput" placeholder="e.g. 🍕 HOT PIZZA DEALS" required>
+                </div>
+                <div class="form-group" id="posterButtonTextGroup">
+                    <label for="posterButtonTextInput">Button Text (Optional - Leave blank to hide button)</label>
+                    <input type="text" id="posterButtonTextInput" placeholder="e.g. Order Pizza Now, Shop Specials" oninput="updatePosterLivePreview()">
+                </div>
+                <div class="form-group">
+                    <label for="posterTitleInput">Banner Main Headline</label>
+                    <input type="text" id="posterTitleInput" placeholder="e.g. Crispy Pizzas & Combos" required>
+                </div>
+                <div class="form-group">
+                    <label for="posterFilterKeyword">Target Search / Category Keyword</label>
+                    <input type="text" id="posterFilterKeyword" placeholder="e.g. pizza, burger, biryani, grocery" title="When clicked on homepage, this searches/filters items automatically">
+                </div>
+                <div class="form-group full-width">
+                    <label for="posterSubtextInput">Banner Subtitle / Description</label>
+                    <textarea id="posterSubtextInput" rows="2" placeholder="e.g. Fresh stone-baked pizzas delivered hot in 15 mins!"></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label>Upload Poster Image (or enter Image URL)</label>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="posterFileInput" accept="image/*" onchange="handlePosterFileUpload(event)" style="flex: 1; padding: 6px; background: #FFF; border: 1.5px dashed #CBD5E1; border-radius: 8px;">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #64748B;">OR</span>
+                        <input type="url" id="posterImageUrlInput" placeholder="https://images.unsplash.com/photo-..." style="flex: 1.5; padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 8px;" oninput="updatePosterLivePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Poster Live Preview in Admin Modal -->
+            <div style="margin-top: 14px; padding: 14px; background: #FFF; border-radius: 12px; border: 1px solid #E2E8F0;">
+                <label style="font-weight: 700; font-size: 0.8rem; color: #475569; display: block; margin-bottom: 8px;">Live Poster Preview:</label>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <img id="adminPosterPreviewImg" src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=400&q=80" style="width: 75px; height: 75px; object-fit: cover; border-radius: 12px; border: 1px solid #CBD5E1;">
+                    <div style="flex: 1;">
+                        <span id="adminPosterPreviewBadge" style="font-size: 0.72rem; color: #D97706; font-weight: 800; background: #FEF3C7; padding: 2px 8px; border-radius: 6px;">🍕 HOT PIZZA DEALS</span>
+                        <div id="adminPosterPreviewTitle" style="font-weight: 800; font-size: 1rem; color: #0F172A; margin-top: 4px;">Crispy Pizzas & Combos</div>
+                        <div id="adminPosterPreviewBtnWrap" style="margin-top: 6px;">
+                            <span id="adminPosterPreviewBtn" style="display: inline-flex; align-items: center; gap: 4px; background: #0F172A; color: #FFF; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
+                                <span id="adminPosterPreviewBtnText">Order Pizza Now</span> <i class="fa-solid fa-chevron-right" style="font-size: 0.6rem;"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary" style="flex: 2; min-width: 180px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save & Publish This Slide
+                </button>
+                <button type="button" class="btn btn-danger" id="adminDeleteSlideBtn" onclick="deleteCurrentBannerSlide()" style="flex: 1; min-width: 130px; display: none;">
+                    <i class="fa-solid fa-trash"></i> Delete Slide
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetAllBannerSlidesToDefault()" style="flex: 1; min-width: 130px;">
+                    <i class="fa-solid fa-rotate-left"></i> Reset Defaults
+                </button>
+            </div>
+        </form>
+    </div>
+
 </body>
 </html>

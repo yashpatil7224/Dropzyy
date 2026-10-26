@@ -4017,6 +4017,68 @@ def update_delivery_settings(
         updated_at=setting.updated_at.isoformat() if setting.updated_at else None
     )
 
+# ==============================================================================
+# PROMOTIONAL BANNER POSTERS (MONGODB ATLAS SEPARATE SECTION)
+# ==============================================================================
+
+@app.get("/api/banners")
+def get_banner_posters(response: Response):
+    """Retrieve all active promotional banner poster slides from MongoDB Atlas."""
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    if mongo_db.is_mongo_active():
+        posters = mongo_db.mongo_get_banner_posters()
+        if posters:
+            return {"status": "success", "source": "mongodb", "count": len(posters), "data": posters}
+    return {
+        "status": "success",
+        "source": "fallback",
+        "count": 0,
+        "data": []
+    }
+
+@app.post("/api/admin/banners")
+@app.post("/api/banners")
+def save_banner_posters(
+    payload: Any = Body(...)
+):
+    """Save or update promotional banner poster slides directly in MongoDB Atlas."""
+    posters = []
+    if isinstance(payload, list):
+        posters = payload
+    elif isinstance(payload, dict) and "banners" in payload:
+        posters = payload["banners"]
+    elif isinstance(payload, dict) and "data" in payload:
+        posters = payload["data"]
+    elif isinstance(payload, dict):
+        posters = [payload]
+
+    if mongo_db.is_mongo_active():
+        success = mongo_db.mongo_save_all_banner_posters(posters)
+        return {
+            "status": "success" if success else "error",
+            "message": "Banner posters saved to MongoDB Atlas dedicated collection 'banner_posters'" if success else "Failed to save to MongoDB",
+            "count": len(posters)
+        }
+    return {
+        "status": "warning",
+        "message": "MongoDB is currently offline, client storage fallback applied",
+        "count": len(posters)
+    }
+
+@app.delete("/api/admin/banners/{poster_id}")
+def delete_banner_poster(poster_id: str):
+    """Delete a promotional banner poster slide from MongoDB Atlas."""
+    if mongo_db.is_mongo_active():
+        deleted = mongo_db.mongo_delete_banner_poster(poster_id)
+        return {
+            "status": "success" if deleted else "not_found",
+            "message": f"Poster '{poster_id}' deleted from MongoDB Atlas" if deleted else "Poster not found"
+        }
+    return {"status": "error", "message": "MongoDB offline"}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
