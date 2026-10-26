@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Ping Dropzyy Production
         run: |
-          echo "Pinging Dropzyy at https://dropzyy.in/ping ..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://dropzyy.in/ping || curl -s -o /dev/null -w "%{http_code}" https://freshkart-9j9b.onrender.com/ping)
-          echo "Response HTTP Status: $STATUS"
+          echo "Pinging Dropzyy Production Services..."
+          curl -s -o /dev/null -w "dropzyy.in: %{http_code}\n" https://www.dropzyy.in/ || true
+          curl -s -o /dev/null -w "dropzyy.in/ping: %{http_code}\n" https://www.dropzyy.in/ping || true
+          curl -s -o /dev/null -w "freshkart-9j9b/ping: %{http_code}\n" https://freshkart-9j9b.onrender.com/ping || true
+          echo "Keep-alive ping completed successfully!"
