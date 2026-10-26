@@ -1,0 +1,17 @@
+name: Keep Dropzyy Alive
+
+on:
+  schedule:
+    # Runs every 10 minutes 24/7 to prevent Render free-tier inactivity sleep
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping-service:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Dropzyy Production
+        run: |
+          echo "Pinging Dropzyy at https://dropzyy.in/ping ..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://dropzyy.in/ping || curl -s -o /dev/null -w "%{http_code}" https://freshkart-9j9b.onrender.com/ping)
+          echo "Response HTTP Status: $STATUS"

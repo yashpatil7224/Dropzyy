@@ -233,6 +233,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ==============================================================================
+# KEEP-ALIVE PING ENDPOINTS (PREVENT RENDER SLEEP / COLD STARTS)
+# ==============================================================================
+@app.get("/ping")
+@app.get("/health")
+@app.get("/api/ping")
+def ping_keep_alive():
+    """
+    Ultra-lightweight keep-alive route.
+    Responds with HTTP 200 'OK' instantly (< 1ms) without database queries.
+    Used by UptimeRobot, cron jobs, and health checks to keep Render active 24/7.
+    """
+    return Response(content="OK", media_type="text/plain")
+
 # ROOT & STATIC FILE SERVING FOR DEPLOYMENT (e.g. Render)
 @app.get("/")
 def read_index():
